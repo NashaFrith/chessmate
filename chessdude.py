@@ -1,6 +1,3 @@
-#Nasha Frith
-#620140159
-
 # chess_agent.py
 
 
