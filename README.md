@@ -1,6 +1,11 @@
 ## chessdude
 
 Hey there! In 2024 I created a fun little chess bot that played chess against me. I am recoding and uploading it now! 
+Improvements underway:
+
+-- Replacing min max algorithm and piece value assignment with a neural network evaluation model
+
+-- Rework current piece movement using bitboards
 
 
 
