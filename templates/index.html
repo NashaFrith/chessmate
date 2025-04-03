@@ -3,49 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chessmate</title>
+    <title>Chessmate AI</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.js"></script>
 </head>
 <body>
-    <h1>Welcome to Chessmate!</h1>
-    <p>Enter a FEN string and get the best move:</p>
+    <h1>Let's Play</h1>
 
-    <input type="text" id="fen-input" placeholder="Enter FEN string" style="width: 300px;">
-    <button onclick="getBestMove()">Get Best Move</button>
+    <div>
+        <h2>Your Move (e.g., e2e4):</h2>
+        <input type="text" id="moveInput" placeholder="Enter your move" />
+        <button id="submitButton">Submit Move</button>
+    </div>
 
-    <h3>Best Move:</h3>
-    <p id="best-move"></p>
+    <div id="response"></div>
 
-    <script>
-        async function getBestMove() {
-            const fen = document.getElementById("fen-input").value;
-            if (!fen) {
-                alert("Please enter a FEN string.");
-                return;
-            }
-
-            try {
-                const response = await fetch("/best-move", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ fen: fen })
-                });
-
-                const data = await response.json();
-                
-                if (data.best_move) {
-                    document.getElementById("best-move").innerText = `Best Move: ${data.best_move}`;
-                } else {
-                    document.getElementById("best-move").innerText = `Error: ${data.error}`;
-                }
-            } catch (error) {
-                console.error("Error fetching best move:", error);
-                document.getElementById("best-move").innerText = "An error occurred.";
-            }
-        }
-    </script>
+    <script src="static/index.js"></script>
 </body>
 </html>
+
 
 

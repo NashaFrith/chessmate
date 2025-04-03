@@ -16,10 +16,7 @@ py -m venv venv
 venv\Scripts\Activate.ps1
 
 # Install packages
-pip install python-chess
-pip install chess
-pip install flask
-#pip install flask-cors
+pip install -r requirements.txt
 
 # Run it
 app.py
