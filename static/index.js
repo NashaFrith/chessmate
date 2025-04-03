@@ -1,3 +1,5 @@
+
+// Add event listener for the submit button
 document.addEventListener("DOMContentLoaded", () => {
     const moveInput = document.getElementById('moveInput'); 
     const submitButton = document.getElementById('submitButton'); 
@@ -5,12 +7,15 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.addEventListener('click', () => {
         const move = moveInput.value; 
 
+        // send post request to server endpoint
         if (move) {
             fetch("/move", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ move: move})  
             })
+
+            //server responds by sending back a json object or an error
             .then(response => response.json())
             .then(data => {
                 console.log("Response:", data);

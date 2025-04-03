@@ -1,4 +1,6 @@
 import chess
+
+#Consider converting using Stockfish
 import chess.engine
 
 
@@ -12,6 +14,7 @@ class ChessDude:
 
     def make_move(self, move):
         #Users no longer need to put in the fen string, instead automatically generates
+        #Instead, uses SAN (Standard Algebraic Notation)
         try:
             chess_move = self.board.parse_san(move)
             if chess_move in self.board.legal_moves:
@@ -45,7 +48,7 @@ class ChessDude:
         #if not in a game state that ends the game, like above, then it will evaluate the value of the board state based on piece values. A helper function is used to assign these values
         material_count = 0
         
-        #This oops through pieces and now uses a bitboard to check board and assign the values
+        #This loops through pieces and now uses a bitboard to check board and assign the values
         for piece_type in range(1, 7): 
             white_bitboard = self.board.pieces(piece_type, chess.WHITE)
             black_bitboard = self.board.pieces(piece_type, chess.BLACK)
@@ -155,22 +158,22 @@ class ChessDude:
                     
         return best_move.uci() if best_move else None    
 
-#----Old----#
-# def play_game():
-#     board = chess.Board()
-#     while not board.is_game_over():
-#         print(board)
-#         if board.turn == chess.WHITE:
-#             # Human's turn
-#             move = input("Enter your move: ")
-#             board.push_san(move)
-#         else:
-#             # Agent's turn
-#             move = get_best_move(board, depth=3)
-#             board.push(move)
 
-#     print("Game over:", board.result())
+    # def play_game():
+    #     board = chess.Board()
+    #     while not board.is_game_over():
+    #         print(board)
+    #         if board.turn == chess.WHITE:
+    #             # Human's turn
+    #             move = input("Enter your move: ")
+    #             board.push_san(move)
+    #         else:
+    #             # Agent's turn
+    #             move = best_move(board, depth=3)
+    #             board.push(move)
 
-# if __name__ == "__main__":
-#     play_game()
-#----Old----#
+    #     print("Game over:", board.result())
+
+    # if __name__ == "__main__":
+    #     play_game()
+

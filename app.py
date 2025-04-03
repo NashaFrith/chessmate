@@ -14,7 +14,6 @@ def home():
 def make_move():
     
     player_move = request.json.get('move')
-    
     player_move_response = engine.make_move(player_move)
     
     
