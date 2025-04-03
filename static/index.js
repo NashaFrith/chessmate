@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
             fetch("/move", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ move: move })  
+                body: JSON.stringify({ move: move})  
             })
             .then(response => response.json())
             .then(data => {
