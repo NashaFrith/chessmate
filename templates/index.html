@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chessmate</title>
+</head>
+<body>
+    <h1>Welcome to Chessmate!</h1>
+    <p>Enter a FEN string and get the best move:</p>
+
+    <input type="text" id="fen-input" placeholder="Enter FEN string" style="width: 300px;">
+    <button onclick="getBestMove()">Get Best Move</button>
+
+    <h3>Best Move:</h3>
+    <p id="best-move"></p>
+
+    <script>
+        async function getBestMove() {
+            const fen = document.getElementById("fen-input").value;
+            if (!fen) {
+                alert("Please enter a FEN string.");
+                return;
+            }
+
+            try {
+                const response = await fetch("/best-move", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ fen: fen })
+                });
+
+                const data = await response.json();
+                
+                if (data.best_move) {
+                    document.getElementById("best-move").innerText = `Best Move: ${data.best_move}`;
+                } else {
+                    document.getElementById("best-move").innerText = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                console.error("Error fetching best move:", error);
+                document.getElementById("best-move").innerText = "An error occurred.";
+            }
+        }
+    </script>
+</body>
+</html>
+
+

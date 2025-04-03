@@ -1,6 +1,3 @@
-# chess_agent.py
-
-
 import chess
 import chess.engine
 
@@ -108,20 +105,20 @@ def get_best_move(board, depth):
                 
     return best_move    
 
-def play_game():
-    board = chess.Board()
-    while not board.is_game_over():
-        print(board)
-        if board.turn == chess.WHITE:
-            # Human's turn
-            move = input("Enter your move: ")
-            board.push_san(move)
-        else:
-            # Agent's turn
-            move = get_best_move(board, depth=3)
-            board.push(move)
+# def play_game():
+#     board = chess.Board()
+#     while not board.is_game_over():
+#         print(board)
+#         if board.turn == chess.WHITE:
+#             # Human's turn
+#             move = input("Enter your move: ")
+#             board.push_san(move)
+#         else:
+#             # Agent's turn
+#             move = get_best_move(board, depth=3)
+#             board.push(move)
 
-    print("Game over:", board.result())
+#     print("Game over:", board.result())
 
-if __name__ == "__main__":
-    play_game()
+# if __name__ == "__main__":
+#     play_game()

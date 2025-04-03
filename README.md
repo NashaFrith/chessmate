@@ -15,8 +15,14 @@ All you need to do is install pip or activate a virtual environment, then instal
 py -m venv venv
 venv\Scripts\Activate.ps1
 
-# Install python-chess
+# Install packages
 pip install python-chess
+pip install chess
+pip install flask
+#pip install flask-cors
+
+# Run it
+app.py
 
 # Deactivate the virtual machine
 deactivate
