@@ -5,7 +5,11 @@ Improvements underway:
 
 -- Replace min max algorithm and piece value assignment with a neural network evaluation model
 
--- Rework current piece movement using bitboards
+-- Rework current piece movement using bitboards (DONE!)
+
+-- Improve front end experience
+
+-- Deploy
 
 
 
