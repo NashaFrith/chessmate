@@ -1,35 +1,39 @@
-
-// Add event listener for the submit button
 document.addEventListener("DOMContentLoaded", () => {
-    const moveInput = document.getElementById('moveInput'); 
-    const submitButton = document.getElementById('submitButton'); 
+    let currentFen = 'start';
 
-    submitButton.addEventListener('click', () => {
-        const move = moveInput.value; 
+    const board = Chessboard('board', {
+        position: 'start',
+        pieceTheme: '/static/img/chesspieces/wikipedia/{piece}.png',
+        draggable: true,
+        onDrop: (source, target) => {
+            if (source === target) return 'snapback';
 
-        // send post request to server endpoint
-        if (move) {
             fetch("/move", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ move: move})  
+                body: JSON.stringify({ from: source, to: target })
             })
-
-            //server responds by sending back a json object or an error
             .then(response => response.json())
             .then(data => {
-                console.log("Response:", data);
-                if (data.status === "Move made") {
-                    
+                if (data.error) {
+                    board.position(currentFen);
+                } else if (data.status === "Move made") {
+                    currentFen = data.fen;
+                    board.position(data.player_fen);
                     if (data.ai_move) {
-                        alert("AI Move: " + data.ai_move);  
+                        setTimeout(() => {
+                            board.position(data.fen);
+                        }, 800);
                     }
-                } else {
-                    alert("Error: " + data.error);
+                } else if (data.status === "Game Over") {
+                    currentFen = data.fen;
+                    board.position(data.fen);
+                    alert("Game Over: " + data.result);
                 }
             })
             .catch(error => {
                 console.error("Error:", error);
+                board.position(currentFen);
             });
         }
     });
