@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chessboard.js Working Example</title>
+
+  <!-- Use the local chessboard.js CSS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link rel="stylesheet" href="css/chessboard-1.0.0.min.css" />
+
+  <style>
+    #board {
+      width: 400px;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h2 style="text-align: center;">Chessboard.js Working Demo</h2>
+  <div id="board"></div>
+
+  <!-- Use the local chessboard.js JS -->
+  <script src="static/chessboard-1.0.0.min.js"></script>
+
+  <!-- Initialize the board -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const board = Chessboard('board', {
+        position: 'start' // starting position of the game
+      });
+    });
+  </script>
+
+</body>
+</html>

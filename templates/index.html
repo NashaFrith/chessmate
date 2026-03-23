@@ -5,20 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chessmate AI</title>
     <!-- For possible future use of chessboard.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chessboard-1.0.0.min.css') }}" />
+    <script src="{{ url_for('static', filename='chessboard-1.0.0.min.js') }}"></script>
+
+    <style>
+        #board {
+          width: 400px;
+          margin: 20px auto;
+        }
+        h1, h2 {
+          text-align: center;
+        }
+    </style>
+
 </head>
 <body>
-    <h1>Let's Play</h1>
+    <h1>chessmate</h1>
 
-    <div>
-        <h2>Your Move (e.g., e2e4):</h2>
-        <input type="text" id="moveInput" placeholder="Enter your move" />
-        <button id="submitButton">Submit Move</button>
+    <div id="board"></div>
+    <div style="text-align: center;">
+        <h2>Your Move</h2>
+        <p>Drag and drop a piece to make your move.</p>
     </div>
 
     <div id="response"></div>
 
-    <script src="static/index.js"></script>
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>
 

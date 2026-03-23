@@ -13,8 +13,9 @@ def home():
 @app.route("/move", methods=["POST"])
 def make_move():
     
-    player_move = request.json.get('move')
-    player_move_response = engine.make_move(player_move)
+    data = request.json
+    player_move_response = engine.make_move_uci(data.get('from'), data.get('to'))
+    player_move = player_move_response.get('move', '')
     
     
     if "error" in player_move_response:
@@ -24,25 +25,33 @@ def make_move():
     
     if engine.board.is_game_over():
         return jsonify({"status": "Game Over", "result": engine.board.result(), "fen": engine.board.fen()})
-    
-    
-    ai_move = engine.best_move(depth=6)
+
+    player_fen = engine.board.fen()
+
+    ai_move = engine.best_move(depth=4)
+    if not ai_move:
+        return jsonify({"error": "AI could not find a move"}), 500
+
     ai_move_response = engine.make_move(ai_move)
-    
-    
+
+    if "error" in ai_move_response:
+        return jsonify(ai_move_response), 500
+
     if engine.board.is_game_over():
         return jsonify({
-            "status": "Game Over", 
-            "result": engine.board.result(), 
-            "fen": engine.board.fen(), 
+            "status": "Game Over",
+            "result": engine.board.result(),
+            "player_fen": player_fen,
+            "fen": engine.board.fen(),
             "ai_move": ai_move_response['move']
         })
-    
+
     return jsonify({
-        "status": "Move made", 
-        "player_move": player_move, 
-        "ai_move": ai_move_response['move'], 
-        "fen": engine.board.fen(), 
+        "status": "Move made",
+        "player_move": player_move,
+        "ai_move": ai_move_response['move'],
+        "player_fen": player_fen,
+        "fen": engine.board.fen(),
         "turn": engine.turn
     })
 
