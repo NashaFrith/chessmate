@@ -3,8 +3,9 @@ import chess.engine
 import chess.polyglot
 import random
 import os
+import shutil
 
-STOCKFISH_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stockfish.exe")
+STOCKFISH_PATH = shutil.which("stockfish") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "stockfish.exe")
 
 OPENING_BOOK = {
     "e2e4":                                         ["e7e5", "c7c5", "e7e6", "c7c6"],

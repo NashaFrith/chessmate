@@ -3,3 +3,4 @@ chess==1.6.0
 python-chess==1.999
 werkzeug==2.2.0
 requests
+gunicorn
