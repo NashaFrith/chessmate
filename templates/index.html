@@ -4,36 +4,716 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chessmate AI</title>
-    <!-- For possible future use of chessboard.js -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chessboard-1.0.0.min.css') }}" />
     <script src="{{ url_for('static', filename='chessboard-1.0.0.min.js') }}"></script>
 
     <style>
-        #board {
-          width: 400px;
-          margin: 20px auto;
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: #1a1a1a;
+            color: #f0f0f0;
         }
+
+        #start-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a1a;
+            color: #f0f0f0;
+        }
+
+        #start-screen h1 {
+            font-size: 4rem;
+            margin: 0 0 12px 0;
+            letter-spacing: 2px;
+        }
+
+        #start-screen p {
+            font-size: 1.2rem;
+            color: #aaa;
+            margin: 0 0 48px 0;
+        }
+
+        .start-buttons {
+            display: flex;
+            gap: 16px;
+        }
+
+        .start-buttons button {
+            padding: 14px 40px;
+            font-size: 1rem;
+            background: #f0f0f0;
+            color: #1a1a1a;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+
+        .start-buttons button:hover {
+            background: #ccc;
+        }
+
+        #difficulty-screen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a1a;
+            color: #f0f0f0;
+        }
+
+        #difficulty-screen h2 {
+            font-size: 1.2rem;
+            font-weight: normal;
+            color: #aaa;
+            margin: 0 0 32px 0;
+            letter-spacing: 1px;
+        }
+
+        .difficulty-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 240px;
+        }
+
+        .difficulty-buttons button {
+            padding: 14px 0;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+        }
+
+        .difficulty-buttons button span.diff-label {
+            font-weight: bold;
+        }
+
+        .difficulty-buttons button span.diff-elo {
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        #btn-easy { background: #81b64c; color: #fff; }
+        #btn-easy:hover { background: #6a9a3c; }
+        #btn-medium { background: #f0a500; color: #fff; }
+        #btn-medium:hover { background: #d48e00; }
+        #btn-hard { background: #c0392b; color: #fff; }
+        #btn-hard:hover { background: #a93226; }
+        #btn-test { background: #444; color: #aaa; font-size: 0.8rem; }
+        #btn-test:hover { background: #555; }
+
+        #review-select-screen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            flex-direction: column;
+            align-items: center;
+            background: #1a1a1a;
+            color: #f0f0f0;
+            overflow-y: auto;
+            padding: 24px 16px;
+            box-sizing: border-box;
+        }
+
+        #review-select-screen h1 { font-size: 2.5rem; margin: 0 0 4px 0; letter-spacing: 2px; }
+        #review-select-screen h2 { font-size: 1rem; font-weight: normal; color: #aaa; margin: 0 0 20px 0; }
+
+        #review-stats {
+            width: min(400px, calc(100vw - 32px));
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+
+        .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .stat-row:last-child { margin-bottom: 0; }
+        .stat-label { color: #aaa; font-size: 0.85rem; }
+        .record-badges { display: flex; gap: 12px; font-size: 0.9rem; font-weight: bold; }
+        .badge-win { color: #81b64c; }
+        .badge-loss { color: #c0392b; }
+        .badge-draw { color: #aaa; }
+        .opening-list { font-size: 0.8rem; color: #ccc; display: flex; flex-direction: column; gap: 3px; }
+        .opening-list span { color: #aaa; }
+
+        .ratings-row { display: flex; justify-content: space-around; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #333; }
+        .rating-box { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .rating-type { font-size: 0.68rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .rating-val { font-size: 1.4rem; font-weight: bold; }
+
+        #btn-more-stats { width: 100%; padding: 8px; background: none; border: 1px solid #333; color: #aaa; font-size: 0.8rem; cursor: pointer; margin-top: 10px; border-radius: 4px; letter-spacing: 1px; }
+        #btn-more-stats:hover { background: #2a2a2a; color: #f0f0f0; }
+
+        #stats-screen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            flex-direction: column;
+            align-items: center;
+            background: #1a1a1a;
+            color: #f0f0f0;
+            overflow-y: auto;
+            padding: 24px 16px 32px;
+            box-sizing: border-box;
+        }
+        #stats-screen h1 { font-size: 2rem; margin: 0 0 2px 0; letter-spacing: 2px; }
+        #stats-screen h2 { font-size: 0.9rem; font-weight: normal; color: #555; margin: 0 0 20px 0; letter-spacing: 1px; }
+
+        .stats-card {
+            width: min(400px, calc(100vw - 32px));
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+        }
+        .section-title { font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+        .stats-tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+        .stats-tab { flex: 1; padding: 6px; background: #333; border: none; color: #666; cursor: pointer; border-radius: 4px; font-size: 0.8rem; }
+        .stats-tab.active { background: #4a4a4a; color: #f0f0f0; }
+
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+        .summary-box { background: #333; border-radius: 6px; padding: 10px 12px; }
+        .summary-box-label { font-size: 0.68rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .summary-box-value { font-size: 1.15rem; font-weight: bold; }
+        .summary-box-sub { font-size: 0.7rem; color: #555; margin-top: 3px; }
+
+        .chart-wrap { position: relative; height: 150px; }
+        .chart-wrap-sm { position: relative; height: 160px; margin-top: 8px; }
+
+        .color-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+        .color-box { background: #333; border-radius: 6px; padding: 10px 12px; }
+        .color-box-title { font-size: 0.7rem; color: #888; margin-bottom: 6px; }
+        .color-box-rate { font-size: 1.3rem; font-weight: bold; }
+        .color-box-sub { font-size: 0.72rem; color: #666; margin-top: 2px; }
+
+        .streak-row { display: flex; justify-content: space-around; }
+        .streak-box { text-align: center; }
+        .streak-label { font-size: 0.68rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .streak-value { font-size: 1.4rem; font-weight: bold; }
+        .streak-sub { font-size: 0.72rem; color: #555; margin-top: 2px; }
+
+        .tc-btn { padding: 6px 18px; background: #2a2a2a; border: 1px solid #444; color: #666; cursor: pointer; border-radius: 4px; font-size: 0.85rem; letter-spacing: 0.5px; }
+        .tc-btn.active { background: #f0f0f0; color: #1a1a1a; border-color: #f0f0f0; font-weight: bold; }
+        .tc-btn:hover:not(.active) { background: #333; color: #aaa; }
+
+        .opening-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
+        .opening-row:last-child { border-bottom: none; }
+        .opening-name { font-size: 0.82rem; color: #ccc; flex: 1; margin-right: 8px; }
+        .opening-rate { font-size: 0.9rem; font-weight: bold; color: #81b64c; }
+        .opening-games { font-size: 0.72rem; color: #555; margin-left: 8px; }
+
+        #review-game-list {
+            width: min(400px, calc(100vw - 32px));
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .game-item {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid transparent;
+        }
+
+        .game-item:hover { background: #333; }
+        .game-item.result-win { border-left-color: #81b64c; }
+        .game-item.result-loss { border-left-color: #c0392b; }
+        .game-item.result-draw { border-left-color: #888; }
+
+        .game-item-left { display: flex; flex-direction: column; gap: 3px; }
+        .game-opponent { font-size: 0.95rem; font-weight: bold; }
+        .game-opening { font-size: 0.75rem; color: #aaa; }
+        .game-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+
+        .game-result-badge {
+            font-size: 0.78rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .game-result-badge.win { background: #81b64c22; color: #81b64c; }
+        .game-result-badge.loss { background: #c0392b22; color: #c0392b; }
+        .game-result-badge.draw { background: #88888822; color: #aaa; }
+        .game-date { font-size: 0.7rem; color: #666; }
+        .game-tc-badge { font-size: 0.7rem; font-weight: normal; color: #888; background: #333; border-radius: 3px; padding: 1px 5px; margin-left: 4px; }
+        .review-back-btn { padding: 10px 32px; font-size: 0.9rem; background: #333; color: #aaa; border: none; cursor: pointer; border-radius: 4px; letter-spacing: 1px; margin-bottom: 16px; }
+        .review-back-btn:hover { background: #444; }
+        .review-loading { text-align: center; padding: 32px; color: #aaa; }
+
+        #review-loading-quip {
+            color: #aaa;
+            font-size: 0.95rem;
+            font-style: italic;
+            text-align: center;
+            min-height: 1.4em;
+            margin-bottom: 12px;
+            width: min(400px, calc(100vw - 32px));
+        }
+
+        #review-progress-wrap {
+            width: min(400px, calc(100vw - 32px));
+            background: #2a2a2a;
+            height: 3px;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #review-progress-bar {
+            height: 100%;
+            background: #f0f0f0;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        #review-board-screen {
+            display: none;
+            min-height: 100vh;
+            padding: 16px;
+            box-sizing: border-box;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #review-board-screen h1 { font-size: clamp(1.5rem, 6vw, 2.5rem); letter-spacing: 2px; margin: 0 0 8px 0; text-align: center; }
+
+        #review-player-panel {
+            width: min(400px, calc(100vw - 32px));
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 8px 0;
+        }
+
+        #review-player-panel img { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+
+        #review-quip-bubble {
+            position: relative;
+            background: #ffffff;
+            color: #2e2e2e;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.4;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+            flex: 1;
+        }
+
+        #review-quip-bubble::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border: 8px solid transparent;
+            border-right-color: #ffffff;
+            border-left: 0;
+        }
+
+        #review-board-wrapper {
+            display: flex;
+            gap: 8px;
+            width: min(420px, calc(100vw - 32px));
+            margin: 8px auto;
+            align-items: stretch;
+        }
+
+        #review-eval-bar {
+            width: 14px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        #review-eval-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #f0f0f0;
+            transition: height 0.4s ease;
+            height: 50%;
+        }
+
+        #review-board-el { flex: 1; }
+
+        #review-info-bar {
+            width: min(400px, calc(100vw - 32px));
+            margin: 6px auto 2px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: #aaa;
+        }
+
+        #review-controls {
+            display: flex;
+            gap: 8px;
+            margin: 6px auto;
+            width: min(400px, calc(100vw - 32px));
+        }
+
+        #review-controls button {
+            flex: 1;
+            padding: 10px;
+            background: #2a2a2a;
+            color: #f0f0f0;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 1.1rem;
+        }
+
+        #review-controls button:hover { background: #333; }
+        #review-controls button:disabled { opacity: 0.3; cursor: default; }
+
+        #review-move-list {
+            width: min(400px, calc(100vw - 32px));
+            margin: 4px auto 8px;
+            max-height: 140px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #ccc;
+        }
+
+        .move-pair { display: grid; grid-template-columns: 28px 1fr 1fr; }
+        .move-num { color: #555; padding: 3px 4px; }
+        .move-san { padding: 3px 6px; border-radius: 3px; cursor: pointer; }
+        .move-san:hover { background: #2a2a2a; }
+        .move-san.active { background: #4a4a4a; color: #fff; }
+        .move-san.blunder { color: #e74c3c; }
+        .move-san.mistake { color: #e67e22; }
+
+        #game {
+            display: none;
+            min-height: 100vh;
+            padding: 24px 16px;
+            box-sizing: border-box;
+        }
+
+        #game h1 {
+            font-size: clamp(2rem, 8vw, 4rem);
+            letter-spacing: 2px;
+            margin: 0 0 16px 0;
+        }
+
+        #game h2 {
+            font-size: clamp(0.95rem, 3vw, 1.2rem);
+            font-weight: normal;
+            margin: 16px 0 4px 0;
+        }
+
+        #game p {
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            color: #aaa;
+            margin: 0;
+        }
+
+        #board {
+            width: min(460px, calc(100vw - 32px));
+            margin: 12px auto;
+        }
+
+        #player-panel {
+            width: min(460px, calc(100vw - 32px));
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 0;
+            box-sizing: border-box;
+        }
+
+        #player-panel img {
+            width: 72px;
+            height: 72px;
+            border-radius: 12px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        #quip-bubble {
+            position: relative;
+            background: #ffffff;
+            color: #2e2e2e;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.4;
+            min-height: 48px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+            flex: 1;
+        }
+
+        #quip-bubble::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border: 8px solid transparent;
+            border-right-color: #ffffff;
+            border-left: 0;
+        }
+
+        #player-name {
+            display: none;
+        }
+
         h1, h2 {
-          text-align: center;
+            text-align: center;
+        }
+
+        .highlight-check {
+            box-shadow: inset 0 0 0 4px red !important;
+        }
+
+        #game-over-screen {
+            display: flex;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 1.8s ease-in;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #game-over-screen.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #quip-bubble.thinking {
+            color: #999;
+            font-style: italic;
+            font-weight: normal;
+        }
+
+        #game-over-screen h1 {
+            font-size: clamp(2.5rem, 10vw, 5rem);
+            margin: 0 0 12px 0;
+            letter-spacing: 2px;
+        }
+
+        #game-over-screen p {
+            font-size: 1.1rem;
+            color: #aaa;
+            margin: 0 0 40px 0;
+        }
+
+        #play-again-button {
+            padding: 14px 40px;
+            font-size: 1rem;
+            background: #f0f0f0;
+            color: #1a1a1a;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+
+        #play-again-button:hover {
+            background: #ccc;
         }
     </style>
 
 </head>
 <body>
-    <h1>chessmate</h1>
 
-    <div id="board"></div>
-    <div style="text-align: center;">
-        <h2>Your Move</h2>
-        <p>Drag and drop a piece to make your move.</p>
+    <div id="start-screen">
+        <h1>chessmate</h1>
+        <p id="start-subtext">play chess with your mate, ignore real life.</p>
+        <div class="start-buttons">
+            <button id="start-button">Play</button>
+            <button id="review-button">Game Review</button>
+            <button id="exit-button">Exit</button>
+        </div>
     </div>
 
-    <div id="response"></div>
+    <div id="difficulty-screen">
+        <h1>chessmate</h1>
+        <h2>pick your difficulty</h2>
+        <div class="difficulty-buttons">
+            <button id="btn-easy"><span class="diff-label">Easy</span><span class="diff-elo">~800</span></button>
+            <button id="btn-medium"><span class="diff-label">Medium</span><span class="diff-elo">1320</span></button>
+            <button id="btn-hard"><span class="diff-label">Hard</span><span class="diff-elo">1600</span></button>
+            <button id="btn-test"><span class="diff-label">Test</span><span class="diff-elo">basically a fish</span></button>
+        </div>
+    </div>
 
+    <div id="review-select-screen">
+        <h1>chessmate</h1>
+        <h2>game review</h2>
+        <div id="review-loading-quip"></div>
+        <div id="review-progress-wrap"><div id="review-progress-bar"></div></div>
+        <div id="review-stats">
+            <div class="ratings-row">
+                <div class="rating-box"><span class="rating-type">Rapid</span><span class="rating-val" id="stat-rapid">—</span></div>
+                <div class="rating-box"><span class="rating-type">Blitz</span><span class="rating-val" id="stat-blitz">—</span></div>
+                <div class="rating-box"><span class="rating-type">Bullet</span><span class="rating-val" id="stat-bullet">—</span></div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Rapid</span>
+                <div class="record-badges">
+                    <span class="badge-win" id="stat-wins">—W</span>
+                    <span class="badge-loss" id="stat-losses">—L</span>
+                    <span class="badge-draw" id="stat-draws">—D</span>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Blitz</span>
+                <div class="record-badges">
+                    <span class="badge-win" id="stat-blitz-wins">—W</span>
+                    <span class="badge-loss" id="stat-blitz-losses">—L</span>
+                    <span class="badge-draw" id="stat-blitz-draws">—D</span>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Bullet</span>
+                <div class="record-badges">
+                    <span class="badge-win" id="stat-bullet-wins">—W</span>
+                    <span class="badge-loss" id="stat-bullet-losses">—L</span>
+                    <span class="badge-draw" id="stat-bullet-draws">—D</span>
+                </div>
+            </div>
+            <div class="stat-row" style="align-items:flex-start">
+                <span class="stat-label" style="padding-top:4px">Top Openings</span>
+                <div class="opening-list" id="stat-openings"><span>loading...</span></div>
+            </div>
+            <div style="position:relative;height:140px;margin-top:10px"><canvas id="openings-pie-chart"></canvas></div>
+            <button id="btn-more-stats">More Stats →</button>
+        </div>
+        <div id="review-game-list"><div class="review-loading">Loading games...</div></div>
+        <button class="review-back-btn" id="btn-review-back">← back</button>
+    </div>
+
+    <div id="stats-screen">
+        <h1>chessmate</h1>
+        <h2>ANDREW'S STATS</h2>
+        <div id="time-class-toggle" style="display:flex;gap:6px;margin-bottom:16px">
+            <button class="tc-btn active" data-tc="rapid">Rapid</button>
+            <button class="tc-btn" data-tc="blitz">Blitz</button>
+            <button class="tc-btn" data-tc="bullet">Bullet</button>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-tabs">
+                <button class="stats-tab active" data-period="lifetime">Lifetime</button>
+                <button class="stats-tab" data-period="monthly">Monthly</button>
+                <button class="stats-tab" data-period="weekly">Weekly</button>
+                <button class="stats-tab" data-period="daily">Daily</button>
+            </div>
+
+            <!-- Period view (monthly/weekly/daily) -->
+            <div id="period-view">
+                <div class="summary-grid" id="period-summary"></div>
+                <div class="section-title">Results Breakdown</div>
+                <div class="chart-wrap-sm"><canvas id="pie-chart"></canvas></div>
+                <div class="section-title" style="margin-top:14px">Rating Trend</div>
+                <div class="chart-wrap"><canvas id="line-chart"></canvas></div>
+            </div>
+
+            <!-- Lifetime view -->
+            <div id="lifetime-view" style="display:none">
+                <div class="summary-grid" id="lifetime-summary"></div>
+                <div class="section-title">White vs Black</div>
+                <div class="color-boxes" id="color-boxes"></div>
+                <div class="chart-wrap"><canvas id="bar-chart"></canvas></div>
+                <div class="section-title" style="margin-top:14px">Streaks & Game Length</div>
+                <div class="streak-row" id="misc-stats"></div>
+                <div class="section-title" style="margin-top:14px">Rating & Win Rate by Month</div>
+                <div class="chart-wrap"><canvas id="monthly-chart"></canvas></div>
+                <div class="section-title" style="margin-top:14px">Time of Day Performance</div>
+                <div class="chart-wrap"><canvas id="tod-chart"></canvas></div>
+                <div class="section-title" style="margin-top:14px">Best Openings <span style="font-size:0.65rem;color:#444">(min 2 games)</span></div>
+                <div id="best-openings"></div>
+            </div>
+        </div>
+
+        <button class="review-back-btn" id="btn-stats-back">← back to games</button>
+    </div>
+
+    <div id="review-board-screen">
+        <h1>chessmate</h1>
+        <div id="review-player-panel">
+            <img src="/static/img/avatar.png" alt="avatar" />
+            <div id="review-quip-bubble">Let's see how you did...</div>
+        </div>
+        <div id="review-board-wrapper">
+            <div id="review-eval-bar"><div id="review-eval-fill"></div></div>
+            <div id="review-board-el"></div>
+        </div>
+        <div id="review-info-bar">
+            <span id="review-game-info"></span>
+            <span id="review-move-counter"></span>
+        </div>
+        <div id="review-controls">
+            <button id="btn-rv-start">⏮</button>
+            <button id="btn-rv-prev">◀</button>
+            <button id="btn-rv-next">▶</button>
+            <button id="btn-rv-end">⏭</button>
+        </div>
+        <div id="review-move-list"></div>
+        <button class="review-back-btn" id="btn-rv-to-list">← back to games</button>
+    </div>
+
+    <div id="game-over-screen">
+        <h1 id="game-over-title"></h1>
+        <p id="game-over-subtitle"></p>
+        <button id="play-again-button">Play Again</button>
+    </div>
+
+    <div id="game">
+        <h1>chessmate</h1>
+        <div id="player-panel">
+            <img src="/static/img/avatar.png" alt="avatar" />
+            <span id="player-name">Andrew</span>
+            <div id="quip-bubble">Let's play!</div>
+        </div>
+        <div id="board"></div>
+        <div style="text-align: center;">
+            <h2 id="turnIndicator">Andrew's Turn</h2>
+            <p>Drag and drop a piece to make your move.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>
-
-
-

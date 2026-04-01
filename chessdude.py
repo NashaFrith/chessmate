@@ -1,5 +1,55 @@
 import chess
 import chess.engine
+import chess.polyglot
+import random
+import os
+
+STOCKFISH_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stockfish.exe")
+
+OPENING_BOOK = {
+    "e2e4":                                         ["e7e5", "c7c5", "e7e6", "c7c6"],
+    "d2d4":                                         ["d7d5", "g8f6", "e7e6"],
+    "g1f3":                                         ["d7d5", "g8f6", "c7c5"],
+    "c2c4":                                         ["e7e5", "g8f6", "c7c5"],
+    "b1c3":                                         ["d7d5", "g8f6", "e7e5"],
+    "g2g3":                                         ["d7d5", "g8f6"],
+    "f2f4":                                         ["d7d5", "g8f6"],
+    "b2b3":                                         ["e7e5", "d7d5"],
+
+    "e2e4 e7e5 g1f3":                               ["b8c6", "g8f6", "d7d6"],
+    "e2e4 e7e5 f1c4":                               ["g8f6", "b8c6", "f8c5"],
+    "e2e4 e7e5 b1c3":                               ["b8c6", "g8f6", "f8c5"],
+    "e2e4 e7e5 d2d4":                               ["e5d4", "d7d6"],
+    "e2e4 e7e5 f2f4":                               ["d7d5", "e5f4"],
+
+    "e2e4 c7c5 g1f3":                               ["d7d6", "b8c6", "e7e6"],
+    "e2e4 c7c5 b1c3":                               ["b8c6", "g8f6", "e7e6"],
+    "e2e4 c7c5 d2d4":                               ["c5d4"],
+
+    "e2e4 e7e6 d2d4":                               ["d7d5"],
+    "e2e4 c7c6 d2d4":                               ["d7d5"],
+    "e2e4 c7c6 d2d4 d7d5":                          ["b8d7", "g8f6", "d5e4"],
+
+    "d2d4 d7d5 c2c4":                               ["e7e6", "c7c6", "d5c4"],
+    "d2d4 d7d5 g1f3":                               ["g8f6", "c7c6", "e7e6"],
+    "d2d4 d7d5 b1c3":                               ["g8f6", "e7e6", "c7c6"],
+
+    "d2d4 g8f6 c2c4":                               ["e7e6", "g7g6", "c7c5"],
+    "d2d4 g8f6 g1f3":                               ["e7e6", "g7g6", "d7d5"],
+
+    "e2e4 e7e5 g1f3 b8c6 f1b5":                     ["a7a6", "g8f6", "f8c5"],
+    "e2e4 e7e5 g1f3 b8c6 f1c4":                     ["f8c5", "g8f6"],
+    "e2e4 e7e5 g1f3 b8c6 d2d4":                     ["e5d4", "g8f6"],
+
+    "e2e4 e7e5 g1f3 b8c6 f1b5 a7a6":               ["f1b5 a7a6 b5a4", "f1b5 a7a6 b5c6"],
+    "e2e4 e7e5 g1f3 b8c6 f1c4 f8c5":               ["g8f6", "d7d6"],
+    "e2e4 e7e5 g1f3 b8c6 f1c4 g8f6":               ["d7d6", "f8c5"],
+
+    "d2d4 d7d5 c2c4 e7e6 b1c3":                     ["g8f6", "f8e7", "c7c5"],
+    "d2d4 d7d5 c2c4 c7c6 g1f3":                     ["g8f6", "e7e6"],
+    "d2d4 g8f6 c2c4 e7e6 b1c3":                     ["f8b4", "d7d5", "c7c5"],
+    "d2d4 g8f6 c2c4 g7g6 b1c3":                     ["f8g7", "d7d5"],
+}
 
 
 PAWN_TABLE = [
@@ -92,6 +142,25 @@ class ChessDude:
     def __init__(self):
         self.board = chess.Board()
         self.turn = 'w'
+        self.think_time = 0.1
+        self.sf = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+        self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 1320})
+
+    def reset(self, difficulty='medium'):
+        self.board = chess.Board()
+        self.turn = 'w'
+        if difficulty == 'test':
+            self.think_time = 0.001
+            self.sf.configure({"UCI_LimitStrength": False, "Skill Level": 0})
+        elif difficulty == 'easy':
+            self.think_time = 0.01
+            self.sf.configure({"UCI_LimitStrength": False})
+        elif difficulty == 'hard':
+            self.think_time = 0.1
+            self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 1600})
+        else:
+            self.think_time = 0.1
+            self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 1320})
 
     def make_move_uci(self, from_sq, to_sq):
         try:
@@ -123,113 +192,140 @@ class ChessDude:
         except Exception:
             return {"error": "Invalid move format"}
 
-    def evaluate_board(self):
-        if self.board.is_checkmate():
-            return -1000000 if self.board.turn else 1000000
-        if self.board.is_stalemate() or self.board.is_seventyfive_moves() or self.board.is_insufficient_material():
-            return 0
+    # Removing for stockfish for gift purposes. Will readd for personal development
+    # def evaluate_board(self):
+    #     if self.board.is_checkmate():
+    #         return -1000000 if self.board.turn else 1000000
+    #     if self.board.is_stalemate() or self.board.is_seventyfive_moves() or self.board.is_insufficient_material():
+    #         return 0
+    #
+    #     score = 0
+    #     for sq, piece in self.board.piece_map().items():
+    #         table = PIECE_TABLES[piece.piece_type]
+    #         value = PIECE_VALUES[piece.piece_type]
+    #         if piece.color == chess.WHITE:
+    #             table_idx = (7 - sq // 8) * 8 + sq % 8
+    #             score += value + table[table_idx]
+    #         else:
+    #             table_idx = sq
+    #             score -= value + table[table_idx]
+    #     return score
 
-        score = 0
-        for sq, piece in self.board.piece_map().items():
-            table = PIECE_TABLES[piece.piece_type]
-            value = PIECE_VALUES[piece.piece_type]
-            if piece.color == chess.WHITE:
-                table_idx = (7 - sq // 8) * 8 + sq % 8
-                score += value + table[table_idx]
-            else:
-                table_idx = sq
-                score -= value + table[table_idx]
-        return score
+    # def order_moves(self, moves):
+    #     def move_score(move):
+    #         if self.board.is_capture(move):
+    #             victim = self.board.piece_at(move.to_square)
+    #             attacker = self.board.piece_at(move.from_square)
+    #             if victim and attacker:
+    #                 return PIECE_VALUES[victim.piece_type] - PIECE_VALUES[attacker.piece_type]
+    #             return 0
+    #         return -1
+    #     return sorted(moves, key=move_score, reverse=True)
 
-    def order_moves(self, moves):
-        def move_score(move):
-            if self.board.is_capture(move):
-                victim = self.board.piece_at(move.to_square)
-                attacker = self.board.piece_at(move.from_square)
-                if victim and attacker:
-                    return PIECE_VALUES[victim.piece_type] - PIECE_VALUES[attacker.piece_type]
-                return 0
-            return -1
-        return sorted(moves, key=move_score, reverse=True)
+    # def quiescence(self, alpha, beta, maximizing_player):
+    #     stand_pat = self.evaluate_board()
+    #     if maximizing_player:
+    #         if stand_pat >= beta:
+    #             return beta
+    #         alpha = max(alpha, stand_pat)
+    #         for move in self.order_moves(self.board.legal_moves):
+    #             if not self.board.is_capture(move):
+    #                 continue
+    #             self.board.push(move)
+    #             score = self.quiescence(alpha, beta, False)
+    #             self.board.pop()
+    #             alpha = max(alpha, score)
+    #             if beta <= alpha:
+    #                 break
+    #         return alpha
+    #     else:
+    #         if stand_pat <= alpha:
+    #             return alpha
+    #         beta = min(beta, stand_pat)
+    #         for move in self.order_moves(self.board.legal_moves):
+    #             if not self.board.is_capture(move):
+    #                 continue
+    #             self.board.push(move)
+    #             score = self.quiescence(alpha, beta, True)
+    #             self.board.pop()
+    #             beta = min(beta, score)
+    #             if beta <= alpha:
+    #                 break
+    #         return beta
 
-    def quiescence(self, alpha, beta, maximizing_player):
-        stand_pat = self.evaluate_board()
+    # def minimax(self, depth, alpha, beta, maximizing_player):
+    #     if depth == 0 or self.board.is_game_over():
+    #         return self.quiescence(alpha, beta, maximizing_player)
+    #     if maximizing_player:
+    #         maxchoice = -float('inf')
+    #         for move in self.order_moves(self.board.legal_moves):
+    #             self.board.push(move)
+    #             eval = self.minimax(depth-1, alpha, beta, False)
+    #             self.board.pop()
+    #             maxchoice = max(maxchoice, eval)
+    #             alpha = max(alpha, eval)
+    #             if beta <= alpha:
+    #                 break
+    #         return maxchoice
+    #     else:
+    #         minchoice = float('inf')
+    #         for move in self.order_moves(self.board.legal_moves):
+    #             self.board.push(move)
+    #             eval = self.minimax(depth-1, alpha, beta, True)
+    #             self.board.pop()
+    #             minchoice = min(minchoice, eval)
+    #             beta = min(beta, eval)
+    #             if beta <= alpha:
+    #                 break
+    #         return minchoice
 
-        if maximizing_player:
-            if stand_pat >= beta:
-                return beta
-            alpha = max(alpha, stand_pat)
-            for move in self.order_moves(self.board.legal_moves):
-                if not self.board.is_capture(move):
-                    continue
-                self.board.push(move)
-                score = self.quiescence(alpha, beta, False)
-                self.board.pop()
-                alpha = max(alpha, score)
-                if beta <= alpha:
-                    break
-            return alpha
-        else:
-            if stand_pat <= alpha:
-                return alpha
-            beta = min(beta, stand_pat)
-            for move in self.order_moves(self.board.legal_moves):
-                if not self.board.is_capture(move):
-                    continue
-                self.board.push(move)
-                score = self.quiescence(alpha, beta, True)
-                self.board.pop()
-                beta = min(beta, score)
-                if beta <= alpha:
-                    break
-            return beta
+    # def best_move(self, depth=4):
+    #     try:
+    #         with chess.polyglot.open_reader("book.bin") as reader:
+    #             entry = reader.weighted_choice(self.board)
+    #             return self.board.san(entry.move)
+    #     except Exception:
+    #         pass
+    #     move_history = " ".join(m.uci() for m in self.board.move_stack)
+    #     if move_history in OPENING_BOOK:
+    #         candidates = OPENING_BOOK[move_history]
+    #         random.shuffle(candidates)
+    #         for uci in candidates:
+    #             try:
+    #                 move = chess.Move.from_uci(uci)
+    #                 if move in self.board.legal_moves:
+    #                     return self.board.san(move)
+    #             except Exception:
+    #                 pass
+    #     best_move = None
+    #     if self.board.turn == chess.WHITE:
+    #         best_value = -float('inf')
+    #     else:
+    #         best_value = float('inf')
+    #     for move in self.order_moves(self.board.legal_moves):
+    #         self.board.push(move)
+    #         board_value = self.minimax(depth-1, -float('inf'), float('inf'), self.board.turn)
+    #         self.board.pop()
+    #         if self.board.turn == chess.WHITE:
+    #             if board_value > best_value:
+    #                 best_value = board_value
+    #                 best_move = move
+    #         elif self.board.turn == chess.BLACK:
+    #             if board_value < best_value:
+    #                 best_value = board_value
+    #                 best_move = move
+    #     return self.board.san(best_move) if best_move else None
 
-    def minimax(self, depth, alpha, beta, maximizing_player):
-        if depth == 0 or self.board.is_game_over():
-            return self.quiescence(alpha, beta, maximizing_player)
+    def best_move(self):
+        try:
+            with chess.polyglot.open_reader("book.bin") as reader:
+                entry = reader.weighted_choice(self.board)
+                return {"move": self.board.san(entry.move), "eval": 0}
+        except Exception:
+            pass
 
-        if maximizing_player:
-            maxchoice = -float('inf')
-            for move in self.order_moves(self.board.legal_moves):
-                self.board.push(move)
-                eval = self.minimax(depth-1, alpha, beta, False)
-                self.board.pop()
-                maxchoice = max(maxchoice, eval)
-                alpha = max(alpha, eval)
-                if beta <= alpha:
-                    break
-            return maxchoice
-        else:
-            minchoice = float('inf')
-            for move in self.order_moves(self.board.legal_moves):
-                self.board.push(move)
-                eval = self.minimax(depth-1, alpha, beta, True)
-                self.board.pop()
-                minchoice = min(minchoice, eval)
-                beta = min(beta, eval)
-                if beta <= alpha:
-                    break
-            return minchoice
-
-    def best_move(self, depth=4):
-        best_move = None
-        if self.board.turn == chess.WHITE:
-            best_value = -float('inf')
-        else:
-            best_value = float('inf')
-
-        for move in self.order_moves(self.board.legal_moves):
-            self.board.push(move)
-            board_value = self.minimax(depth-1, -float('inf'), float('inf'), self.board.turn)
-            self.board.pop()
-
-            if self.board.turn == chess.WHITE:
-                if board_value > best_value:
-                    best_value = board_value
-                    best_move = move
-            elif self.board.turn == chess.BLACK:
-                if board_value < best_value:
-                    best_value = board_value
-                    best_move = move
-
-        return self.board.san(best_move) if best_move else None
+        result = self.sf.play(self.board, chess.engine.Limit(time=self.think_time), info=chess.engine.INFO_SCORE)
+        move_san = self.board.san(result.move)
+        score = result.info.get('score')
+        eval_score = score.white().score(mate_score=10000) if score else 0
+        return {"move": move_san, "eval": eval_score}
