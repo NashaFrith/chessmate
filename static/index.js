@@ -16,6 +16,30 @@ function playFart() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    // ── Password gate ─────────────────────────────────────────────
+    const PASSWORD = 'chessmates';
+    const pwGate  = document.getElementById('password-gate');
+    const pwInput = document.getElementById('pw-input');
+    const pwBtn   = document.getElementById('pw-submit');
+    const pwError = document.getElementById('pw-error');
+
+    function unlockApp() { pwGate.style.display = 'none'; }
+    if (sessionStorage.getItem('cm_auth') === '1') { unlockApp(); }
+
+    function tryPassword() {
+        if (pwInput.value === PASSWORD) {
+            sessionStorage.setItem('cm_auth', '1');
+            unlockApp();
+        } else {
+            pwError.textContent = 'wrong password, try again';
+            pwInput.value = '';
+            pwInput.focus();
+        }
+    }
+    pwBtn.addEventListener('click', tryPassword);
+    pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryPassword(); });
+    // ── End password gate ─────────────────────────────────────────
+
     const difficultyScreen = document.getElementById('difficulty-screen');
 
     const loadingScreen = document.getElementById('loading-screen');
@@ -256,18 +280,45 @@ document.addEventListener("DOMContentLoaded", () => {
             "I love you but... no.",
             "The pieces were RIGHT THERE.",
             "Okay we're not gonna talk about that move.",
-            "That's a blunder babe."
+            "That's a blunder babe.",
+            "...yikes...",
+            "I don't even know what to say about that one."
         ],
         review_mistake: [
             "Hmm, not your best work.",
             "You had better options there.",
             "A little shaky.",
+            "Not a great move.",
+            "We all make mistakes babe"
         ],
         review_good: [
-            "Okay I see you!",
+            "Okay big guy!",
             "Nice move.",
             "That's the one.",
             "Clean.",
+            "Not bad, not bad!",
+            "Pretty good move baby",
+            "Wooooo, awesome!",
+        ],
+        review_sacrifice_rook: [
+            "Omg you did the thing you sacrificed...THE ROOOOOOOK",
+        ],
+        review_sacrifice_queen: [
+            "You sacrificed THE QUEEEN-wait, why are you sacrificing your queen :(",
+        ],
+        review_best: [
+            "That's exactly what we needed.",
+            "Best move. Smooth!",
+            "You found it! The best one.",
+            "Okay Hikaru calm down.",
+            "I would've played that. So would you. Love that.",
+        ],
+        review_book: [
+            "You know your theory!",
+            "From the book.",
+            "what a scholar!",
+            "Classic.",
+            "Textbook. Literally.",
         ],
         review_win: [
             "You won this one! That's my boyfriend.",
@@ -370,7 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let activeTimeClass  = 'rapid';
     let todChart         = null;
     let monthlyChart     = null;
-    let openingsPieChart = null;
+    let radarChart = null;
 
     // ── Stats screen ──────────────────────────────────────────────
     const statsScreen = document.getElementById('stats-screen');
@@ -730,6 +781,92 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     // ── End stats screen ──────────────────────────────────────────
 
+    // ── Friend metrics screen ─────────────────────────────────────
+    const friendScreen = document.getElementById('friend-screen');
+
+    document.getElementById('btn-friend-metrics').addEventListener('click', () => {
+        reviewSelectScreen.style.display = 'none';
+        friendScreen.style.display = 'flex';
+    });
+
+    document.getElementById('btn-friend-back').addEventListener('click', () => {
+        friendScreen.style.display = 'none';
+        reviewSelectScreen.style.display = 'flex';
+    });
+
+    function renderFriendResults(data, username) {
+        const r = document.getElementById('friend-results');
+        const total = data.total;
+        const aPct  = total ? Math.round(data.andrew_wins / total * 100) : 0;
+        const fPct  = total ? Math.round(data.friend_wins / total * 100) : 0;
+        const dPct  = total ? Math.round(data.draws / total * 100) : 0;
+
+        const openingBlock = (list, label) => {
+            if (!list || !list.length) return '';
+            const items = list.map(([name, count]) => `<li>${name} <span style="color:#555">(${count})</span></li>`).join('');
+            return `<div class="friend-card">
+                <div class="friend-card-title">${label}</div>
+                <ul class="friend-opening-list" style="margin:0;padding-left:16px">${items}</ul>
+            </div>`;
+        };
+
+        const suggestions = (data.suggestions || []).map(s => `<div class="friend-suggestion">${s}</div>`).join('');
+
+        r.innerHTML = `
+            <div class="friend-card">
+                <div class="friend-card-title">Head-to-Head vs ${username} · ${total} game${total !== 1 ? 's' : ''}</div>
+                <div class="friend-h2h">
+                    <div class="friend-h2h-val">
+                        <div class="big" style="color:#81b64c">${data.andrew_wins}</div>
+                        <div class="lbl">Andrew (${aPct}%)</div>
+                    </div>
+                    <div style="font-size:1.4rem;color:#444">vs</div>
+                    <div class="friend-h2h-val">
+                        <div class="big" style="color:#c0392b">${data.friend_wins}</div>
+                        <div class="lbl">${username} (${fPct}%)</div>
+                    </div>
+                    <div class="friend-h2h-val">
+                        <div class="big" style="color:#888">${data.draws}</div>
+                        <div class="lbl">Draws (${dPct}%)</div>
+                    </div>
+                </div>
+                ${data.andrew_avg_accuracy != null ? `
+                <div class="friend-acc-row">
+                    <span>Andrew avg acc: <strong>${data.andrew_avg_accuracy}%</strong></span>
+                    <span>${username} avg acc: <strong>${data.friend_avg_accuracy != null ? data.friend_avg_accuracy + '%' : '—'}</strong></span>
+                </div>` : ''}
+            </div>
+            ${openingBlock(data.andrew_as_white, 'Andrew as White')}
+            ${openingBlock(data.andrew_as_black, 'Andrew as Black')}
+            ${openingBlock(data.friend_as_white, `${username} as White`)}
+            ${openingBlock(data.friend_as_black, `${username} as Black`)}
+            ${suggestions ? `<div class="friend-card"><div class="friend-card-title">Nasha's suggestions</div>${suggestions}</div>` : ''}
+        `;
+    }
+
+    function lookupFriend() {
+        const username = document.getElementById('friend-username-input').value.trim();
+        if (!username) return;
+        const r = document.getElementById('friend-results');
+        r.innerHTML = '<div class="friend-error">Loading...</div>';
+        fetch(`/review/friend/${encodeURIComponent(username)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    r.innerHTML = `<div class="friend-error">${data.error}</div>`;
+                } else {
+                    renderFriendResults(data, username);
+                }
+            })
+            .catch(() => { r.innerHTML = '<div class="friend-error">Could not load data.</div>'; });
+    }
+
+    document.getElementById('btn-friend-lookup').addEventListener('click', lookupFriend);
+    document.getElementById('friend-username-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') lookupFriend();
+    });
+    // ── End friend metrics screen ─────────────────────────────────
+
     function setReviewQuip(category) {
         const pool = quips[category] || [];
         reviewQuip.textContent = pool[Math.floor(Math.random() * pool.length)] || '';
@@ -756,12 +893,36 @@ document.addEventListener("DOMContentLoaded", () => {
         return evalCache[fen];
     }
 
-    function classifyDrop(before, after) {
+    function detectSacrifice(game, moveIdx) {
+        if (moveIdx >= game.fens.length - 1) return null;
+        const fenNow  = game.fens[moveIdx];
+        const fenNext = game.fens[moveIdx + 1];
+        const count = (fen, ch) => (fen.split(' ')[0].match(new RegExp(ch, 'g')) || []).length;
+        const R = game.is_white ? 'R' : 'r';
+        const Q = game.is_white ? 'Q' : 'q';
+        if (count(fenNow, Q) > count(fenNext, Q)) return 'queen';
+        if (count(fenNow, R) > count(fenNext, R)) return 'rook';
+        return null;
+    }
+
+    function classifyDrop(before, after, moveIdx = 999) {
         const drop = before - after;
         if (drop >= 200) return 'blunder';
         if (drop >= 100) return 'mistake';
-        return '';
+        if (drop >= 50)  return 'inaccuracy';
+        if (drop >= 15)  return 'excellent';
+        if (moveIdx <= 10) return 'book';
+        return 'best';
     }
+
+    const classSymbol = {
+        book:       'B',
+        best:       '✓',
+        excellent:  '!',
+        inaccuracy: '?!',
+        mistake:    '?',
+        blunder:    '??',
+    };
 
     function renderMoveList(game) {
         reviewMoveList.innerHTML = '';
@@ -777,14 +938,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const w = document.createElement('span');
             w.className = 'move-san';
             w.dataset.idx = i + 1;
-            w.textContent = moves[i];
-            if (moveClassCache[i + 1]) w.classList.add(moveClassCache[i + 1]);
+            const wClass = moveClassCache[i + 1];
+            if (wClass) w.classList.add(wClass);
+            w.innerHTML = `${moves[i]}${wClass ? `<span class="move-badge ${wClass}">${classSymbol[wClass]}</span>` : ''}`;
 
             const b = document.createElement('span');
             b.className = 'move-san';
             b.dataset.idx = i + 2;
-            b.textContent = moves[i + 1] || '';
-            if (moves[i + 1] && moveClassCache[i + 2]) b.classList.add(moveClassCache[i + 2]);
+            const bClass = moves[i + 1] && moveClassCache[i + 2];
+            if (bClass) b.classList.add(bClass);
+            b.innerHTML = moves[i + 1]
+                ? `${moves[i + 1]}${bClass ? `<span class="move-badge ${bClass}">${classSymbol[bClass]}</span>` : ''}`
+                : '';
 
             [w, b].forEach(el => {
                 if (el.textContent) {
@@ -844,14 +1009,21 @@ document.addEventListener("DOMContentLoaded", () => {
             if (isAndrewMove) {
                 const andrewEvalBefore = currentGame.is_white ? evalPrev : -evalPrev;
                 const andrewEvalAfter  = currentGame.is_white ? evalNow  : -evalNow;
-                const classification = classifyDrop(andrewEvalBefore, andrewEvalAfter);
-                if (classification && !moveClassCache[currentMoveIdx]) {
+                const classification = classifyDrop(andrewEvalBefore, andrewEvalAfter, currentMoveIdx);
+                if (!moveClassCache[currentMoveIdx]) {
                     moveClassCache[currentMoveIdx] = classification;
                     renderMoveList(currentGame);
-                    if (classification === 'blunder') setReviewQuip('review_blunder');
-                    else if (classification === 'mistake') setReviewQuip('review_mistake');
-                } else if (!classification && !moveClassCache[currentMoveIdx]) {
-                    setReviewQuip('review_good');
+                    const sacrifice = (classification === 'best' || classification === 'excellent')
+                        ? detectSacrifice(currentGame, currentMoveIdx)
+                        : null;
+                    if      (sacrifice === 'queen')           setReviewQuip('review_sacrifice_queen');
+                    else if (sacrifice === 'rook')            setReviewQuip('review_sacrifice_rook');
+                    else if (classification === 'blunder')    setReviewQuip('review_blunder');
+                    else if (classification === 'mistake')    setReviewQuip('review_mistake');
+                    else if (classification === 'inaccuracy') setReviewQuip('review_mistake');
+                    else if (classification === 'best')       setReviewQuip('review_best');
+                    else if (classification === 'book')       setReviewQuip('review_book');
+                    else                                      setReviewQuip('review_good');
                 }
             }
         }
@@ -967,39 +1139,91 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('stat-openings').innerHTML = s.top_openings.length
                     ? s.top_openings.slice(0, 3).map(([name, count]) => `<span>${name} <span style="color:#666">(${count})</span></span>`).join('')
                     : '<span>—</span>';
-                if (s.top_openings.length) {
-                    const top3 = s.top_openings.slice(0, 3);
-                    const rest = s.top_openings.slice(3);
-                    const top3Total = top3.reduce((sum, [, c]) => sum + c, 0);
-                    const otherCount = reviewChartData.length - top3Total;
-                    const labels = [...top3.map(([n]) => n.length > 22 ? n.slice(0, 22) + '…' : n), 'Other'];
-                    const counts = [...top3.map(([, c]) => c), otherCount];
-                    const colors = ['#81b64c', '#f0a500', '#4a9eda', '#888'];
-                    const otherBreakdown = rest.length
-                        ? rest.map(([n, c]) => `${n.length > 24 ? n.slice(0, 24) + '…' : n}: ${c}`).join('\n')
-                        : null;
-                    if (openingsPieChart) openingsPieChart.destroy();
-                    openingsPieChart = mkChart('openings-pie-chart', {
-                        type: 'doughnut',
-                        data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0 }] },
+                // ── Radar / profile chart ──────────────────────────────
+                (function buildRadar() {
+                    const all = reviewChartData;
+                    if (!all.length) return;
+
+                    const total   = all.length;
+                    const wins    = all.filter(g => g.result === 'win').length;
+                    const winRate = wins / total * 100;
+
+                    const withAcc = all.filter(g => g.accuracy != null);
+                    const avgAcc  = withAcc.length
+                        ? withAcc.reduce((s, g) => s + g.accuracy, 0) / withAcc.length
+                        : 0;
+                    // scale accuracy: treat 60 as 0, 100 as 100
+                    const accuracyScore = Math.max(0, Math.min(100, (avgAcc - 60) / 40 * 100));
+
+                    // Consistency: 100 - normalised std-dev of accuracy (σ=0→100, σ=20→0)
+                    let consistencyScore = 0;
+                    if (withAcc.length > 1) {
+                        const mean = avgAcc;
+                        const variance = withAcc.reduce((s, g) => s + (g.accuracy - mean) ** 2, 0) / withAcc.length;
+                        const stdDev = Math.sqrt(variance);
+                        consistencyScore = Math.max(0, 100 - stdDev / 20 * 100);
+                    }
+
+                    // Opening variety: unique openings as fraction of games, capped at 40% uniqueness = 100
+                    const uniqueOpenings = new Set(all.map(g => g.opening).filter(Boolean)).size;
+                    const varietyScore   = Math.min(100, uniqueOpenings / (total * 0.4) * 100);
+
+                    // Endgame skill: win rate in 40+ move games
+                    const longGames = all.filter(g => g.move_count >= 40);
+                    const endgameScore = longGames.length
+                        ? longGames.filter(g => g.result === 'win').length / longGames.length * 100
+                        : 50;
+
+                    // Aggression: shorter decisive games → more aggressive (avg moves <25 = 100, >60 = 0)
+                    const decisive = all.filter(g => g.result !== 'draw' && g.move_count > 0);
+                    const avgMoves = decisive.length
+                        ? decisive.reduce((s, g) => s + g.move_count, 0) / decisive.length
+                        : 40;
+                    const aggressionScore = Math.max(0, Math.min(100, (60 - avgMoves) / 35 * 100));
+
+                    // Speed: win rate in blitz + bullet
+                    const speedGames = all.filter(g => g.time_class === 'blitz' || g.time_class === 'bullet');
+                    const speedScore = speedGames.length
+                        ? speedGames.filter(g => g.result === 'win').length / speedGames.length * 100
+                        : 50;
+
+                    const radarLabels = ['Win Rate', 'Accuracy', 'Consistency', 'Opening\nVariety', 'Endgame\nSkill', 'Aggression', 'Speed'];
+                    const radarValues = [winRate, accuracyScore, consistencyScore, varietyScore, endgameScore, aggressionScore, speedScore].map(v => Math.round(v));
+
+                    if (radarChart) radarChart.destroy();
+                    radarChart = mkChart('profile-radar-chart', {
+                        type: 'radar',
+                        data: {
+                            labels: radarLabels,
+                            datasets: [{
+                                data: radarValues,
+                                backgroundColor: 'rgba(129,182,76,0.18)',
+                                borderColor: '#81b64c',
+                                borderWidth: 2,
+                                pointBackgroundColor: '#81b64c',
+                                pointRadius: 3,
+                            }]
+                        },
                         options: {
                             responsive: true, maintainAspectRatio: false,
+                            scales: {
+                                r: {
+                                    min: 0, max: 100,
+                                    ticks: { display: false, stepSize: 25 },
+                                    grid: { color: '#333' },
+                                    angleLines: { color: '#333' },
+                                    pointLabels: { color: '#aaa', font: { size: 9 } }
+                                }
+                            },
                             plugins: {
-                                legend: { position: 'right', labels: { color: '#aaa', font: { size: 9 }, boxWidth: 8, padding: 6 } },
+                                legend: { display: false },
                                 tooltip: {
-                                    callbacks: {
-                                        label: ctx => {
-                                            if (ctx.label === 'Other' && otherBreakdown) {
-                                                return otherBreakdown.split('\n');
-                                            }
-                                            return `${ctx.label}: ${ctx.parsed}`;
-                                        }
-                                    }
+                                    callbacks: { label: ctx => `${ctx.label.replace('\n', ' ')}: ${ctx.raw}` }
                                 }
                             }
                         }
                     });
-                }
+                })();
                 renderGameList(reviewGames);
             })
             .catch(() => {

@@ -18,6 +18,43 @@
             color: #f0f0f0;
         }
 
+        #password-gate {
+            position: fixed;
+            inset: 0;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        #password-gate h1 { font-size: 3rem; margin: 0 0 8px 0; letter-spacing: 2px; }
+        #password-gate p { color: #aaa; margin: 0 0 28px 0; font-size: 1rem; }
+        #password-gate input {
+            padding: 12px 20px;
+            font-size: 1rem;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #f0f0f0;
+            border-radius: 4px;
+            width: 220px;
+            text-align: center;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        #password-gate button {
+            padding: 12px 40px;
+            font-size: 1rem;
+            background: #f0f0f0;
+            color: #1a1a1a;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 1px;
+            width: 100%;
+        }
+        #password-gate button:hover { background: #ccc; }
+        #pw-error { color: #c0392b; font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+
         #start-screen {
             position: fixed;
             inset: 0;
@@ -156,8 +193,44 @@
         .rating-type { font-size: 0.68rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
         .rating-val { font-size: 1.4rem; font-weight: bold; }
 
-        #btn-more-stats { width: 100%; padding: 8px; background: none; border: 1px solid #333; color: #aaa; font-size: 0.8rem; cursor: pointer; margin-top: 10px; border-radius: 4px; letter-spacing: 1px; }
-        #btn-more-stats:hover { background: #2a2a2a; color: #f0f0f0; }
+        #btn-more-stats, #btn-friend-metrics { padding: 8px; background: none; border: 1px solid #333; color: #aaa; font-size: 0.8rem; cursor: pointer; border-radius: 4px; letter-spacing: 1px; }
+        #btn-more-stats:hover, #btn-friend-metrics:hover { background: #2a2a2a; color: #f0f0f0; }
+
+        #friend-screen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            flex-direction: column;
+            align-items: center;
+            background: #1a1a1a;
+            overflow-y: auto;
+            padding: 24px 16px 32px;
+            box-sizing: border-box;
+        }
+        #friend-screen h1 { font-size: 2rem; margin: 0 0 2px 0; letter-spacing: 2px; }
+        #friend-screen h2 { font-size: 0.9rem; font-weight: normal; color: #555; margin: 0 0 20px 0; letter-spacing: 1px; }
+        #friend-search-row { display: flex; gap: 8px; width: min(400px, calc(100vw - 32px)); margin-bottom: 20px; }
+        #friend-username-input {
+            flex: 1; padding: 10px 14px; background: #2a2a2a; border: 1px solid #444;
+            color: #f0f0f0; border-radius: 4px; font-size: 0.95rem; outline: none;
+        }
+        #btn-friend-lookup {
+            padding: 10px 18px; background: #81b64c; color: #fff; border: none;
+            border-radius: 4px; cursor: pointer; font-size: 0.95rem; letter-spacing: 1px;
+        }
+        #btn-friend-lookup:hover { background: #6a9a3c; }
+        #friend-results { width: min(400px, calc(100vw - 32px)); }
+        .friend-card { background: #2a2a2a; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+        .friend-card-title { font-size: 0.7rem; color: #666; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+        .friend-h2h { display: flex; justify-content: space-around; align-items: center; margin-bottom: 6px; }
+        .friend-h2h-val { text-align: center; }
+        .friend-h2h-val .big { font-size: 2rem; font-weight: bold; }
+        .friend-h2h-val .lbl { font-size: 0.75rem; color: #888; }
+        .friend-acc-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #aaa; margin-top: 8px; padding-top: 8px; border-top: 1px solid #333; }
+        .friend-opening-list { font-size: 0.8rem; color: #aaa; }
+        .friend-opening-list li { margin: 4px 0; }
+        .friend-suggestion { background: #1e2e16; border-left: 3px solid #81b64c; padding: 8px 12px; margin-bottom: 8px; font-size: 0.85rem; color: #c5e8a0; border-radius: 0 4px 4px 0; }
+        .friend-error { color: #c0392b; font-size: 0.9rem; text-align: center; padding: 20px; }
 
         #stats-screen {
             display: none;
@@ -412,8 +485,26 @@
         .move-san { padding: 3px 6px; border-radius: 3px; cursor: pointer; }
         .move-san:hover { background: #2a2a2a; }
         .move-san.active { background: #4a4a4a; color: #fff; }
-        .move-san.blunder { color: #e74c3c; }
-        .move-san.mistake { color: #e67e22; }
+        .move-san.blunder    { color: #e74c3c; }
+        .move-san.mistake    { color: #e67e22; }
+        .move-san.inaccuracy { color: #f0c542; }
+        .move-san.excellent  { color: #96bc4b; }
+        .move-san.best       { color: #7fa650; }
+        .move-san.book       { color: #5c8dd6; }
+
+        .move-badge {
+            font-size: 0.6rem;
+            font-weight: bold;
+            vertical-align: super;
+            margin-left: 1px;
+            opacity: 0.9;
+        }
+        .move-badge.book       { color: #5c8dd6; }
+        .move-badge.best       { color: #7fa650; }
+        .move-badge.excellent  { color: #96bc4b; }
+        .move-badge.inaccuracy { color: #f0c542; }
+        .move-badge.mistake    { color: #e67e22; }
+        .move-badge.blunder    { color: #e74c3c; }
 
         #game {
             display: none;
@@ -629,6 +720,14 @@
 </head>
 <body>
 
+    <div id="password-gate">
+        <h1>chessmate</h1>
+        <p>for andrew and nasha only :)</p>
+        <input type="password" id="pw-input" placeholder="password" />
+        <button id="pw-submit">enter</button>
+        <div id="pw-error"></div>
+    </div>
+
     <div id="start-screen">
         <h1>chessmate</h1>
         <p id="start-subtext">play chess with your mate, ignore real life.</p>
@@ -690,11 +789,28 @@
                 <span class="stat-label" style="padding-top:4px">Top Openings</span>
                 <div class="opening-list" id="stat-openings"><span>loading...</span></div>
             </div>
-            <div style="position:relative;height:140px;margin-top:10px"><canvas id="openings-pie-chart"></canvas></div>
-            <button id="btn-more-stats">More Stats →</button>
+            <div class="stat-row" style="justify-content:center;margin-top:4px">
+                <span style="font-size:0.75rem;color:#666;letter-spacing:1px;text-transform:uppercase">Chess Profile</span>
+            </div>
+            <div style="position:relative;height:200px;margin-top:4px"><canvas id="profile-radar-chart"></canvas></div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+                <button id="btn-more-stats" style="flex:1">More Stats →</button>
+                <button id="btn-friend-metrics" style="flex:1">vs Friend →</button>
+            </div>
         </div>
         <div id="review-game-list"><div class="review-loading">Loading games...</div></div>
         <button class="review-back-btn" id="btn-review-back">← back</button>
+    </div>
+
+    <div id="friend-screen">
+        <h1>chessmate</h1>
+        <h2>FRIEND METRICS</h2>
+        <div id="friend-search-row">
+            <input type="text" id="friend-username-input" placeholder="chess.com username" />
+            <button id="btn-friend-lookup">Go</button>
+        </div>
+        <div id="friend-results"></div>
+        <button class="review-back-btn" id="btn-friend-back">← back to games</button>
     </div>
 
     <div id="stats-screen">

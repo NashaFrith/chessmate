@@ -141,7 +141,7 @@ def get_review_games():
         ).json().get('archives', [])
 
         all_games = []
-        for url in reversed(archives[-3:]):
+        for url in reversed(archives):
             all_games.extend(http.get(url, headers=CHESS_COM_HEADERS, timeout=10).json().get('games', []))
 
         stats_data = http.get(
@@ -241,6 +241,91 @@ def get_review_games():
                 'bullet_draws':  bullet_stats.get('record', {}).get('draw', 0),
                 'top_openings': sorted(openings.items(), key=lambda x: -x[1])[:7]
             }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/review/friend/<username>')
+def friend_metrics(username):
+    try:
+        archives = http.get(
+            f'https://api.chess.com/pub/player/{CHESS_COM_USERNAME}/games/archives',
+            headers=CHESS_COM_HEADERS, timeout=10
+        ).json().get('archives', [])
+
+        all_games = []
+        for url in reversed(archives[-6:]):
+            all_games.extend(http.get(url, headers=CHESS_COM_HEADERS, timeout=10).json().get('games', []))
+
+        h2h = [g for g in all_games if
+               g.get('white', {}).get('username', '').lower() == username.lower() or
+               g.get('black', {}).get('username', '').lower() == username.lower()]
+
+        if not h2h:
+            return jsonify({'error': f'No games found against {username} in the last 6 months'}), 404
+
+        andrew_wins = 0; friend_wins = 0; draws = 0
+        andrew_accs = []; friend_accs = []
+        andrew_as_white = {}; andrew_as_black = {}
+        friend_as_white = {}; friend_as_black = {}
+
+        for g in h2h:
+            is_andrew_white = g.get('white', {}).get('username', '').lower() == CHESS_COM_USERNAME.lower()
+            andrew_side = g.get('white' if is_andrew_white else 'black', {})
+            andrew_result = andrew_side.get('result', '')
+            result = 'win' if andrew_result == 'win' else ('draw' if andrew_result in DRAW_RESULTS else 'loss')
+            if result == 'win': andrew_wins += 1
+            elif result == 'loss': friend_wins += 1
+            else: draws += 1
+
+            accs = g.get('accuracies', {})
+            if accs:
+                a = accs.get('white' if is_andrew_white else 'black')
+                f = accs.get('black' if is_andrew_white else 'white')
+                if a is not None: andrew_accs.append(a)
+                if f is not None: friend_accs.append(f)
+
+            pgn_text = g.get('pgn', '')
+            opening = opening_from_pgn(pgn_text)
+            if opening:
+                if is_andrew_white:
+                    andrew_as_white[opening] = andrew_as_white.get(opening, 0) + 1
+                    friend_as_black[opening] = friend_as_black.get(opening, 0) + 1
+                else:
+                    andrew_as_black[opening] = andrew_as_black.get(opening, 0) + 1
+                    friend_as_white[opening] = friend_as_white.get(opening, 0) + 1
+
+        suggestions = []
+        if friend_as_black:
+            fav = max(friend_as_black, key=friend_as_black.get)
+            suggestions.append(f'They play the {fav} as Black — study this line before your next game.')
+        if friend_as_white:
+            fav = max(friend_as_white, key=friend_as_white.get)
+            suggestions.append(f'They open with the {fav} as White — have a solid response ready.')
+        if andrew_accs and friend_accs:
+            a_avg = sum(andrew_accs) / len(andrew_accs)
+            f_avg = sum(friend_accs) / len(friend_accs)
+            if f_avg > a_avg + 3:
+                suggestions.append(f'They outplay you in accuracy ({f_avg:.1f}% vs {a_avg:.1f}%) — slow down and calculate deeper.')
+            elif a_avg > f_avg + 3:
+                suggestions.append(f'You lead in accuracy ({a_avg:.1f}% vs {f_avg:.1f}%) — keep up the precise play.')
+        if friend_wins > andrew_wins:
+            suggestions.append('They currently have the head-to-head edge — study their wins to find patterns to exploit.')
+        elif andrew_wins > friend_wins:
+            suggestions.append("You're ahead head-to-head — keep doing what's working.")
+
+        return jsonify({
+            'total': len(h2h),
+            'andrew_wins': andrew_wins,
+            'friend_wins': friend_wins,
+            'draws': draws,
+            'andrew_avg_accuracy': round(sum(andrew_accs) / len(andrew_accs), 1) if andrew_accs else None,
+            'friend_avg_accuracy': round(sum(friend_accs) / len(friend_accs), 1) if friend_accs else None,
+            'andrew_as_white': sorted(andrew_as_white.items(), key=lambda x: -x[1])[:5],
+            'andrew_as_black': sorted(andrew_as_black.items(), key=lambda x: -x[1])[:5],
+            'friend_as_white': sorted(friend_as_white.items(), key=lambda x: -x[1])[:5],
+            'friend_as_black': sorted(friend_as_black.items(), key=lambda x: -x[1])[:5],
+            'suggestions': suggestions,
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
