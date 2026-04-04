@@ -1044,6 +1044,7 @@ document.addEventListener("DOMContentLoaded", () => {
         onDragStart: (source, piece) => {
             if (waitingForAI) return false;
             if (piece.search(/^b/) !== -1) return false;
+            if (fartCtx.state === 'suspended') fartCtx.resume();
             return true;
         },
         onDrop: (source, target) => {
@@ -1072,7 +1073,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     currentFen = data.fen;
                     board.position(data.player_fen, false);
                     clearCheckHighlight();
-                    if (data.ai_move) {
+                    if (!data.ai_move) {
+                        turnIndicator.textContent = "Andrew's Turn";
+                    } else {
                         waitingForAI = true;
                         setTimeout(() => {
                             startThinking();
@@ -1109,6 +1112,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Error:", error);
                 board.position(currentFen);
                 turnIndicator.textContent = "Andrew's Turn";
+                waitingForAI = false;
             });
         }
     });
