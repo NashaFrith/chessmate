@@ -1004,6 +1004,10 @@ document.addEventListener("DOMContentLoaded", () => {
         position: 'start',
         pieceTheme: '/static/img/chesspieces/wikipedia/{piece}.png',
         draggable: true,
+        onDragStart: (source, piece) => {
+            if (waitingForAI) return false;
+            if (piece.search(/^b/) !== -1) return false; // only white pieces
+        },
         onDrop: (source, target) => {
             if (source === target) return 'snapback';
             if (waitingForAI) return 'snapback';

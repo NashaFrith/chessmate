@@ -5,11 +5,18 @@ import random
 import os
 import shutil
 
-STOCKFISH_PATH = (
-    shutil.which("stockfish") or
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "stockfish_linux") or
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "stockfish.exe")
-)
+def _find_stockfish():
+    sf = shutil.which("stockfish")
+    if sf:
+        return sf
+    base = os.path.dirname(os.path.abspath(__file__))
+    for name in ("stockfish_linux", "stockfish", "stockfish.exe"):
+        path = os.path.join(base, name)
+        if os.path.exists(path):
+            return path
+    raise FileNotFoundError("Stockfish not found. Install it or place the binary in the project folder.")
+
+STOCKFISH_PATH = _find_stockfish()
 
 OPENING_BOOK = {
     "e2e4":                                         ["e7e5", "c7c5", "e7e6", "c7c6"],
