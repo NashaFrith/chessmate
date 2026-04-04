@@ -19,23 +19,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const difficultyScreen = document.getElementById('difficulty-screen');
 
     function startGame(difficulty) {
+        board.start();
+        currentFen = 'start';
+        clearCheckHighlight();
+        stopThinking();
+        clearSlowMoveTimer();
+        waitingForAI = true; // block moves until reset completes
+        isItalian = false;
+        italianAcknowledged = false;
+        turnIndicator.textContent = "Andrew's Turn";
+        difficultyScreen.style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        setQuip('gameStart');
+
         fetch('/reset', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ difficulty })
         }).then(() => {
-            board.start();
-            currentFen = 'start';
-            clearCheckHighlight();
-            stopThinking();
-            clearSlowMoveTimer();
-            waitingForAI = false;
-            isItalian = false;
-            italianAcknowledged = false;
-            turnIndicator.textContent = "Andrew's Turn";
-            difficultyScreen.style.display = 'none';
-            document.getElementById('game').style.display = 'block';
-            setQuip('gameStart');
+            waitingForAI = false; // now allow moves
         });
     }
 
