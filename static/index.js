@@ -18,26 +18,39 @@ function playFart() {
 document.addEventListener("DOMContentLoaded", () => {
     const difficultyScreen = document.getElementById('difficulty-screen');
 
+    const loadingScreen = document.getElementById('loading-screen');
+    const loadingQuip = document.getElementById('loading-quip');
+    const loadingQuips = {
+        test:   "I don't know anything :(",
+        easy:   "Okay I'm gonna try my best :(",
+        medium: "Let's see what you've got",
+        hard:   "You're gonna get cooked",
+    };
+
     function startGame(difficulty) {
         board.start();
         currentFen = 'start';
         clearCheckHighlight();
         stopThinking();
         clearSlowMoveTimer();
-        waitingForAI = true; // block moves until reset completes
+        waitingForAI = true;
         isItalian = false;
         italianAcknowledged = false;
         turnIndicator.textContent = "Andrew's Turn";
         difficultyScreen.style.display = 'none';
         document.getElementById('game').style.display = 'block';
-        setQuip('gameStart');
+
+        loadingQuip.textContent = loadingQuips[difficulty] || "Let's play!";
+        loadingScreen.classList.add('visible');
 
         fetch('/reset', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ difficulty })
         }).then(() => {
-            waitingForAI = false; // now allow moves
+            loadingScreen.classList.remove('visible');
+            waitingForAI = false;
+            setQuip('gameStart');
         });
     }
 
