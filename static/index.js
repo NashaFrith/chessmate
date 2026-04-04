@@ -51,17 +51,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const gameOverTitle = document.getElementById('game-over-title');
     const gameOverSubtitle = document.getElementById('game-over-subtitle');
 
-    document.getElementById('play-again-button').addEventListener('click', () => {
+    function returnToMenu() {
         board.start();
         currentFen = 'start';
         clearCheckHighlight();
         stopThinking();
+        clearSlowMoveTimer();
+        waitingForAI = false;
         isItalian = false;
         italianAcknowledged = false;
         turnIndicator.textContent = "Andrew's Turn";
         gameOverScreen.classList.remove('visible');
         document.getElementById('game').style.display = 'none';
         difficultyScreen.style.display = 'flex';
+    }
+
+    document.getElementById('play-again-button').addEventListener('click', returnToMenu);
+
+    document.getElementById('quit-game-button').addEventListener('click', () => {
+        if (confirm('Quit this game?')) returnToMenu();
     });
 
     function clearCheckHighlight() {
