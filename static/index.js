@@ -23,11 +23,20 @@ document.addEventListener("DOMContentLoaded", () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ difficulty })
+        }).then(() => {
+            board.start();
+            currentFen = 'start';
+            clearCheckHighlight();
+            stopThinking();
+            clearSlowMoveTimer();
+            waitingForAI = false;
+            isItalian = false;
+            italianAcknowledged = false;
+            turnIndicator.textContent = "Andrew's Turn";
+            difficultyScreen.style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+            setQuip('gameStart');
         });
-        difficultyScreen.style.display = 'none';
-        document.getElementById('game').style.display = 'block';
-        setQuip('gameStart');
-        startSlowMoveTimer();
     }
 
     document.getElementById('start-button').addEventListener('click', () => {
@@ -1019,7 +1028,8 @@ document.addEventListener("DOMContentLoaded", () => {
         draggable: true,
         onDragStart: (source, piece) => {
             if (waitingForAI) return false;
-            if (piece.search(/^b/) !== -1) return false; // only white pieces
+            if (piece.search(/^b/) !== -1) return false;
+            return true;
         },
         onDrop: (source, target) => {
             if (source === target) return 'snapback';
