@@ -9,7 +9,13 @@ import requests as http
 from chessdude import ChessDude
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
-engine = ChessDude()
+engine = None
+
+def get_engine():
+    global engine
+    if engine is None:
+        engine = ChessDude()
+    return engine
 
 @app.route('/')
 def home():
@@ -18,53 +24,52 @@ def home():
 @app.route("/reset", methods=["POST"])
 def reset():
     data = request.json or {}
-    engine.reset(data.get('difficulty', 'medium'))
+    get_engine().reset(data.get('difficulty', 'medium'))
     return jsonify({"status": "ok"})
 
 @app.route("/move", methods=["POST"])
 def make_move():
-    
+    e = get_engine()
     data = request.json
-    player_move_response = engine.make_move_uci(data.get('from'), data.get('to'))
+    player_move_response = e.make_move_uci(data.get('from'), data.get('to'))
     player_move = player_move_response.get('move', '')
-    
-    
+
     if "error" in player_move_response:
         return jsonify(player_move_response), 400
-    
-    if engine.board.is_game_over():
-        return jsonify({"status": "Game Over", "result": engine.board.result(), "fen": engine.board.fen()})
 
-    player_fen = engine.board.fen()
+    if e.board.is_game_over():
+        return jsonify({"status": "Game Over", "result": e.board.result(), "fen": e.board.fen()})
 
-    best = engine.best_move()
+    player_fen = e.board.fen()
+
+    best = e.best_move()
     ai_move = best["move"]
     eval_score = best["eval"]
 
     if not ai_move:
         return jsonify({"error": "AI could not find a move"}), 500
 
-    white_rooks_before = len(engine.board.pieces(chess.ROOK, chess.WHITE))
-    ai_move_response = engine.make_move(ai_move)
-    rook_captured = len(engine.board.pieces(chess.ROOK, chess.WHITE)) < white_rooks_before
+    white_rooks_before = len(e.board.pieces(chess.ROOK, chess.WHITE))
+    ai_move_response = e.make_move(ai_move)
+    rook_captured = len(e.board.pieces(chess.ROOK, chess.WHITE)) < white_rooks_before
 
     if "error" in ai_move_response:
         return jsonify(ai_move_response), 500
 
-    if engine.board.is_game_over():
+    if e.board.is_game_over():
         return jsonify({
             "status": "Game Over",
-            "result": engine.board.result(),
+            "result": e.board.result(),
             "player_fen": player_fen,
-            "fen": engine.board.fen(),
+            "fen": e.board.fen(),
             "ai_move": ai_move_response['move']
         })
 
     check_square = None
-    if engine.board.is_check():
-        check_square = chess.square_name(engine.board.king(engine.board.turn))
+    if e.board.is_check():
+        check_square = chess.square_name(e.board.king(e.board.turn))
 
-    moves_uci = [m.uci() for m in engine.board.move_stack]
+    moves_uci = [m.uci() for m in e.board.move_stack]
     is_italian = 'f1c4' in moves_uci[:8]
 
     return jsonify({
@@ -72,8 +77,8 @@ def make_move():
         "player_move": player_move,
         "ai_move": ai_move_response['move'],
         "player_fen": player_fen,
-        "fen": engine.board.fen(),
-        "turn": engine.turn,
+        "fen": e.board.fen(),
+        "turn": e.turn,
         "check_square": check_square,
         "eval_score": eval_score,
         "is_italian": is_italian,
@@ -248,7 +253,7 @@ def get_review_eval():
         return jsonify({'error': 'No FEN'}), 400
     try:
         board = chess.Board(fen)
-        result = engine.sf.play(board, chess.engine.Limit(time=0.05), info=chess.engine.INFO_SCORE)
+        result = get_engine().sf.play(board, chess.engine.Limit(time=0.05), info=chess.engine.INFO_SCORE)
         score = result.info.get('score')
         eval_val = score.white().score(mate_score=10000) if score else 0
         return jsonify({'eval': eval_val})
