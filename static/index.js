@@ -35,6 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
         difficultyScreen.style.display = 'flex';
     });
 
+    document.getElementById('btn-back-to-start').addEventListener('click', () => {
+        difficultyScreen.style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+    });
+
     document.getElementById('btn-easy').addEventListener('click', () => startGame('easy'));
     document.getElementById('btn-medium').addEventListener('click', () => startGame('medium'));
     document.getElementById('btn-hard').addEventListener('click', () => startGame('hard'));
