@@ -307,6 +307,32 @@ document.addEventListener("DOMContentLoaded", () => {
             "Classic.",
             "Textbook. Literally.",
         ],
+        opp_blunder: [
+            "They blundered! Don't let it go to waste.",
+            "Oh they messed up. Your move.",
+            "Free real estate.",
+            "That was a gift. Take it.",
+        ],
+        opp_mistake: [
+            "They slipped a little there.",
+            "Not their best move.",
+            "A small error. Make them pay.",
+        ],
+        opp_good: [
+            "Solid move from them.",
+            "They found something good.",
+            "Not bad on their end.",
+        ],
+        opp_best: [
+            "That was the best move. Respect.",
+            "Engine approved. Watch out.",
+            "They calculated that well.",
+        ],
+        opp_book: [
+            "They know their theory too.",
+            "By the book.",
+            "Classic response.",
+        ],
         review_win: [
             "You won this one! That's my boyfriend.",
             "W! See, I knew you could do it.",
@@ -391,7 +417,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ── Review mode ──────────────────────────────────────────────
     const reviewSelectScreen = document.getElementById('review-select-screen');
     const reviewBoardScreen  = document.getElementById('review-board-screen');
-    const reviewQuip         = document.getElementById('review-quip-bubble');
+    const reviewQuip         = document.getElementById('review-quip-text');
     const reviewEvalFill     = document.getElementById('review-eval-fill');
     const reviewMoveList     = document.getElementById('review-move-list');
     const reviewInfoBar      = document.getElementById('review-game-info');
@@ -953,6 +979,12 @@ document.addEventListener("DOMContentLoaded", () => {
         blunder:    '??',
     };
 
+    function moveClassInfo(raw) {
+        if (!raw) return { cls: null, sym: null };
+        const base = raw.startsWith('opp_') ? raw.slice(4) : raw;
+        return { cls: base, sym: classSymbol[base] || null };
+    }
+
     function renderMoveList(game) {
         reviewMoveList.innerHTML = '';
         const moves = game.moves;
@@ -967,17 +999,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const w = document.createElement('span');
             w.className = 'move-san';
             w.dataset.idx = i + 1;
-            const wClass = moveClassCache[i + 1];
-            if (wClass) w.classList.add(wClass);
-            w.innerHTML = `${moves[i]}${wClass ? `<span class="move-badge ${wClass}">${classSymbol[wClass]}</span>` : ''}`;
+            const { cls: wCls, sym: wSym } = moveClassInfo(moveClassCache[i + 1]);
+            if (wCls) w.classList.add(wCls);
+            w.innerHTML = `${moves[i]}${wCls ? `<span class="move-badge ${wCls}">${wSym}</span>` : ''}`;
 
             const b = document.createElement('span');
             b.className = 'move-san';
             b.dataset.idx = i + 2;
-            const bClass = moves[i + 1] && moveClassCache[i + 2];
-            if (bClass) b.classList.add(bClass);
+            const { cls: bCls, sym: bSym } = moveClassInfo(moves[i + 1] ? moveClassCache[i + 2] : null);
+            if (bCls) b.classList.add(bCls);
             b.innerHTML = moves[i + 1]
-                ? `${moves[i + 1]}${bClass ? `<span class="move-badge ${bClass}">${classSymbol[bClass]}</span>` : ''}`
+                ? `${moves[i + 1]}${bCls ? `<span class="move-badge ${bCls}">${bSym}</span>` : ''}`
                 : '';
 
             [w, b].forEach(el => {
@@ -1036,25 +1068,41 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? (currentMoveIdx % 2 === 1)
                 : (currentMoveIdx % 2 === 0);
 
-            if (isAndrewMove) {
+            // Compute and cache classification if not yet known
+            if (!moveClassCache[currentMoveIdx]) {
                 const andrewEvalBefore = currentGame.is_white ? evalPrev : -evalPrev;
                 const andrewEvalAfter  = currentGame.is_white ? evalNow  : -evalNow;
-                const classification = classifyDrop(andrewEvalBefore, andrewEvalAfter, currentMoveIdx);
-                if (!moveClassCache[currentMoveIdx]) {
-                    moveClassCache[currentMoveIdx] = classification;
-                    renderMoveList(currentGame);
-                    const sacrifice = (classification === 'best' || classification === 'excellent')
-                        ? detectSacrifice(currentGame, currentMoveIdx)
-                        : null;
-                    if      (sacrifice === 'queen')           setReviewQuip('review_sacrifice_queen', 'review_sacrifice_queen');
-                    else if (sacrifice === 'rook')            setReviewQuip('review_sacrifice_rook',  'review_sacrifice_rook');
-                    else if (classification === 'blunder')    setReviewQuip('review_blunder',    'blunder');
-                    else if (classification === 'mistake')    setReviewQuip('review_mistake',    'mistake');
-                    else if (classification === 'inaccuracy') setReviewQuip('review_mistake',    'inaccuracy');
-                    else if (classification === 'best')       setReviewQuip('review_best',       'best');
-                    else if (classification === 'book')       setReviewQuip('review_book',       'book');
-                    else                                      setReviewQuip('review_good',       'excellent');
+                if (isAndrewMove) {
+                    moveClassCache[currentMoveIdx] = classifyDrop(andrewEvalBefore, andrewEvalAfter, currentMoveIdx);
+                } else {
+                    // Opponent: classify from their perspective (invert)
+                    moveClassCache[currentMoveIdx] = 'opp_' + classifyDrop(-andrewEvalBefore, -andrewEvalAfter, currentMoveIdx);
                 }
+                renderMoveList(currentGame);
+            }
+
+            // Always quip based on current classification
+            const cls = moveClassCache[currentMoveIdx];
+            if (isAndrewMove) {
+                const sacrifice = (cls === 'best' || cls === 'excellent')
+                    ? detectSacrifice(currentGame, currentMoveIdx)
+                    : null;
+                if      (sacrifice === 'queen')   setReviewQuip('review_sacrifice_queen', 'review_sacrifice_queen');
+                else if (sacrifice === 'rook')    setReviewQuip('review_sacrifice_rook',  'review_sacrifice_rook');
+                else if (cls === 'blunder')       setReviewQuip('review_blunder',    'blunder');
+                else if (cls === 'mistake')       setReviewQuip('review_mistake',    'mistake');
+                else if (cls === 'inaccuracy')    setReviewQuip('review_mistake',    'inaccuracy');
+                else if (cls === 'best')          setReviewQuip('review_best',       'best');
+                else if (cls === 'book')          setReviewQuip('review_book',       'book');
+                else                              setReviewQuip('review_good',       'excellent');
+            } else {
+                const oppCls = cls.replace('opp_', '');
+                if      (oppCls === 'blunder')    setReviewQuip('opp_blunder',  'blunder');
+                else if (oppCls === 'mistake')    setReviewQuip('opp_mistake',  'mistake');
+                else if (oppCls === 'inaccuracy') setReviewQuip('opp_mistake',  'inaccuracy');
+                else if (oppCls === 'best')       setReviewQuip('opp_best',     'best');
+                else if (oppCls === 'book')       setReviewQuip('opp_book',     'book');
+                else                              setReviewQuip('opp_good',     'excellent');
             }
         }
 
@@ -1070,12 +1118,8 @@ document.addEventListener("DOMContentLoaded", () => {
         reviewSelectScreen.style.display = 'none';
         reviewBoardScreen.style.display = 'flex';
 
-        if (!reviewBoardObj) {
-            reviewBoardObj = Chessboard('review-board-el', {
-                position: 'start',
-                pieceTheme: '/static/img/chesspieces/wikipedia/{piece}.png',
-            });
-        }
+        exitExplore();
+        initReviewBoard();
 
         const resultLabel = { win: 'WIN', loss: 'LOSS', draw: 'DRAW' }[game.result] || '';
         reviewInfoBar.textContent = `${game.white} vs ${game.black} · ${resultLabel}${game.opening ? ' · ' + game.opening : ''}`;
@@ -1300,9 +1344,100 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.addEventListener('keydown', e => {
         if (reviewBoardScreen.style.display !== 'flex') return;
+        if (isExploring) return;
         if (e.key === 'ArrowLeft')  goToMove(currentMoveIdx - 1);
         if (e.key === 'ArrowRight') goToMove(currentMoveIdx + 1);
     });
+
+    // ── Explore mode ──────────────────────────────────────────────
+    let isExploring = false;
+    let exploreFen  = null;
+    const exploreBanner = document.getElementById('explore-banner');
+
+    function enterExplore(fen) {
+        isExploring = true;
+        exploreFen  = fen;
+        exploreBanner.style.display = 'flex';
+        reviewBoardObj.draggable(true);
+        reviewBoardObj.orientation(currentGame.is_white ? 'white' : 'black');
+        ['btn-rv-start','btn-rv-prev','btn-rv-next','btn-rv-end'].forEach(id => {
+            document.getElementById(id).disabled = true;
+        });
+        setReviewQuip('review_good', null);
+    }
+
+    function exitExplore() {
+        isExploring = false;
+        exploreFen  = null;
+        exploreBanner.style.display = 'none';
+        if (currentGame) goToMove(currentMoveIdx);
+    }
+
+    document.getElementById('btn-explore-back').addEventListener('click', exitExplore);
+
+    document.getElementById('btn-explore-ai').addEventListener('click', async () => {
+        if (!exploreFen) return;
+        const btn = document.getElementById('btn-explore-ai');
+        btn.disabled = true;
+        btn.textContent = 'Thinking...';
+        try {
+            const res = await fetch('/review/explore/best_move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fen: exploreFen })
+            });
+            const data = await res.json();
+            if (data.error) { btn.disabled = false; btn.textContent = 'AI plays ▶'; return; }
+            playMove();
+            exploreFen = data.fen;
+            reviewBoardObj.position(exploreFen, false);
+            const evalVal = data.eval ?? 0;
+            reviewEvalFill.style.height = evalToPercent(evalVal) + '%';
+            setReviewQuip('opp_good', null);
+        } catch (_) {}
+        btn.disabled = false;
+        btn.textContent = 'AI plays ▶';
+    });
+
+    // Wire review board draggable behaviour for explore
+    function initReviewBoard() {
+        if (reviewBoardObj) return;
+        reviewBoardObj = Chessboard('review-board-el', {
+            position: 'start',
+            pieceTheme: '/static/img/chesspieces/wikipedia/{piece}.png',
+            draggable: true,
+            onDragStart: (_source) => {
+                if (!currentGame) return false;
+                if (!isExploring) {
+                    // Enter explore mode from current position
+                    enterExplore(currentGame.fens[currentMoveIdx]);
+                }
+                return true;
+            },
+            onDrop: async (source, target) => {
+                if (source === target) return 'snapback';
+                const res = await fetch('/review/explore/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fen: exploreFen, from: source, to: target })
+                });
+                const data = await res.json();
+                if (data.error) { playFart(); return 'snapback'; }
+                playMove();
+                exploreFen = data.fen;
+                const evalRes = await fetch('/review/eval', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fen: exploreFen })
+                });
+                const evalData = await evalRes.json();
+                reviewEvalFill.style.height = evalToPercent(evalData.eval ?? 0) + '%';
+                setReviewQuip('review_good', null);
+            },
+            onSnapEnd: () => { if (exploreFen) reviewBoardObj.position(exploreFen, false); }
+        });
+    }
+    // ── End explore mode ──────────────────────────────────────────
     // ── End review mode ───────────────────────────────────────────
 
     const board = Chessboard('board', {

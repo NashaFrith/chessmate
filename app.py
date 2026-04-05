@@ -509,5 +509,49 @@ def get_review_eval():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/review/explore/move', methods=['POST'])
+@require_auth
+def explore_move():
+    data = request.json or {}
+    fen, from_sq, to_sq = data.get('fen'), data.get('from'), data.get('to')
+    if not fen or not from_sq or not to_sq:
+        return jsonify({'error': 'Missing fields'}), 400
+    try:
+        board = chess.Board(fen)
+        uci = f"{from_sq}{to_sq}"
+        piece = board.piece_at(chess.parse_square(from_sq))
+        if piece and piece.piece_type == chess.PAWN and chess.square_rank(chess.parse_square(to_sq)) in (0, 7):
+            uci += 'q'
+        move = chess.Move.from_uci(uci)
+        if move not in board.legal_moves:
+            return jsonify({'error': 'Illegal move'}), 400
+        san = board.san(move)
+        board.push(move)
+        return jsonify({'fen': board.fen(), 'san': san})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/review/explore/best_move', methods=['POST'])
+@require_auth
+def explore_best_move():
+    data = request.json or {}
+    fen = data.get('fen')
+    if not fen:
+        return jsonify({'error': 'No FEN'}), 400
+    try:
+        board = chess.Board(fen)
+        if board.is_game_over():
+            return jsonify({'error': 'Game over'}), 400
+        result = get_engine().sf.play(board, chess.engine.Limit(time=0.1))
+        move = result.move
+        san = board.san(move)
+        board.push(move)
+        score_result = get_engine().sf.play(board, chess.engine.Limit(time=0.05), info=chess.engine.INFO_SCORE)
+        score = score_result.info.get('score')
+        eval_val = score.white().score(mate_score=10000) if score else 0
+        return jsonify({'fen': board.fen(), 'move': move.uci(), 'san': san, 'eval': eval_val})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)

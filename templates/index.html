@@ -354,13 +354,15 @@
         #review-player-panel img { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
 
         #review-move-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: bold;
             letter-spacing: 1px;
             text-transform: uppercase;
-            min-height: 1em;
-            margin-bottom: 3px;
+            display: block;
+            margin-bottom: 4px;
+            min-height: 0;
         }
+        #review-move-label:empty { display: none; }
         #review-move-label.book       { color: #5c8dd6; }
         #review-move-label.best       { color: #7fa650; }
         #review-move-label.excellent  { color: #96bc4b; }
@@ -452,6 +454,23 @@
 
         #review-controls button:hover { background: #333; }
         #review-controls button:disabled { opacity: 0.3; cursor: default; }
+
+        #explore-banner {
+            width: min(400px, calc(100vw - 32px));
+            margin: 4px auto;
+            background: #1e2e16;
+            border: 1px solid #81b64c;
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        #explore-label { font-size: 0.75rem; color: #81b64c; letter-spacing: 1px; text-transform: uppercase; }
+        #explore-controls { display: flex; gap: 6px; }
+        #explore-controls button { padding: 5px 10px; font-size: 0.78rem; border: 1px solid #81b64c; background: none; color: #81b64c; border-radius: 4px; cursor: pointer; }
+        #explore-controls button:hover { background: #81b64c; color: #1a1a1a; }
 
         #review-move-list {
             width: min(400px, calc(100vw - 32px));
@@ -827,8 +846,10 @@
         <h1>chessmate</h1>
         <div id="review-player-panel">
             <img src="/static/img/avatar.png" alt="avatar" />
-            <div id="review-move-label"></div>
-            <div id="review-quip-bubble">Let's see how you did...</div>
+            <div id="review-quip-bubble">
+                <div id="review-move-label"></div>
+                <span id="review-quip-text">Let's see how you did...</span>
+            </div>
         </div>
         <div id="review-board-wrapper">
             <div id="review-eval-bar"><div id="review-eval-fill"></div></div>
@@ -843,6 +864,13 @@
             <button id="btn-rv-prev">◀</button>
             <button id="btn-rv-next">▶</button>
             <button id="btn-rv-end">⏭</button>
+        </div>
+        <div id="explore-banner" style="display:none">
+            <span id="explore-label">Exploring variation</span>
+            <div id="explore-controls">
+                <button id="btn-explore-ai">AI plays ▶</button>
+                <button id="btn-explore-back">↩ Back to game</button>
+            </div>
         </div>
         <div id="review-move-list"></div>
         <button class="review-back-btn" id="btn-rv-to-list">← back to games</button>
