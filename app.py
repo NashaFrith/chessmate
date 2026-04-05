@@ -248,6 +248,7 @@ def get_review_games():
 @app.route('/review/friend/<username>')
 def friend_metrics(username):
     try:
+        # Fetch Andrew's archives and friend's stats in parallel-ish
         archives = http.get(
             f'https://api.chess.com/pub/player/{CHESS_COM_USERNAME}/games/archives',
             headers=CHESS_COM_HEADERS, timeout=10
@@ -257,6 +258,26 @@ def friend_metrics(username):
         for url in reversed(archives[-6:]):
             all_games.extend(http.get(url, headers=CHESS_COM_HEADERS, timeout=10).json().get('games', []))
 
+        # Friend's global stats
+        friend_stats = {}
+        try:
+            friend_stats = http.get(
+                f'https://api.chess.com/pub/player/{username}/stats',
+                headers=CHESS_COM_HEADERS, timeout=8
+            ).json()
+        except Exception:
+            pass
+
+        # Andrew's global stats for comparison
+        andrew_stats = {}
+        try:
+            andrew_stats = http.get(
+                f'https://api.chess.com/pub/player/{CHESS_COM_USERNAME}/stats',
+                headers=CHESS_COM_HEADERS, timeout=8
+            ).json()
+        except Exception:
+            pass
+
         h2h = [g for g in all_games if
                g.get('white', {}).get('username', '').lower() == username.lower() or
                g.get('black', {}).get('username', '').lower() == username.lower()]
@@ -264,19 +285,40 @@ def friend_metrics(username):
         if not h2h:
             return jsonify({'error': f'No games found against {username} in the last 6 months'}), 404
 
+        h2h_sorted = sorted(h2h, key=lambda g: g.get('end_time', 0))
+
         andrew_wins = 0; friend_wins = 0; draws = 0
         andrew_accs = []; friend_accs = []
         andrew_as_white = {}; andrew_as_black = {}
         friend_as_white = {}; friend_as_black = {}
+        # Per-opening results for Andrew {opening: [wins, losses, draws]}
+        opening_results = {}
+        # Color results
+        white_wins = 0; white_losses = 0; white_draws = 0
+        black_wins = 0; black_losses = 0; black_draws = 0
+        # Recent streak (last 5)
+        recent = []
 
-        for g in h2h:
+        for g in h2h_sorted:
             is_andrew_white = g.get('white', {}).get('username', '').lower() == CHESS_COM_USERNAME.lower()
             andrew_side = g.get('white' if is_andrew_white else 'black', {})
             andrew_result = andrew_side.get('result', '')
             result = 'win' if andrew_result == 'win' else ('draw' if andrew_result in DRAW_RESULTS else 'loss')
+
             if result == 'win': andrew_wins += 1
             elif result == 'loss': friend_wins += 1
             else: draws += 1
+
+            recent.append(result)
+
+            if is_andrew_white:
+                if result == 'win': white_wins += 1
+                elif result == 'loss': white_losses += 1
+                else: white_draws += 1
+            else:
+                if result == 'win': black_wins += 1
+                elif result == 'loss': black_losses += 1
+                else: black_draws += 1
 
             accs = g.get('accuracies', {})
             if accs:
@@ -288,6 +330,12 @@ def friend_metrics(username):
             pgn_text = g.get('pgn', '')
             opening = opening_from_pgn(pgn_text)
             if opening:
+                if opening not in opening_results:
+                    opening_results[opening] = [0, 0, 0]
+                if result == 'win': opening_results[opening][0] += 1
+                elif result == 'loss': opening_results[opening][1] += 1
+                else: opening_results[opening][2] += 1
+
                 if is_andrew_white:
                     andrew_as_white[opening] = andrew_as_white.get(opening, 0) + 1
                     friend_as_black[opening] = friend_as_black.get(opening, 0) + 1
@@ -295,27 +343,105 @@ def friend_metrics(username):
                     andrew_as_black[opening] = andrew_as_black.get(opening, 0) + 1
                     friend_as_white[opening] = friend_as_white.get(opening, 0) + 1
 
+        recent5 = recent[-5:]
+        total = len(h2h)
+
+        # Pull ratings
+        def get_rating(stats, tc):
+            return stats.get(f'chess_{tc}', {}).get('last', {}).get('rating')
+
+        friend_rapid  = get_rating(friend_stats, 'rapid')
+        friend_blitz  = get_rating(friend_stats, 'blitz')
+        andrew_rapid  = get_rating(andrew_stats, 'rapid')
+        andrew_blitz  = get_rating(andrew_stats, 'blitz')
+
         suggestions = []
-        if friend_as_black:
+
+        # 1. Recent streak
+        if len(recent5) >= 3:
+            last3 = recent5[-3:]
+            if all(r == 'loss' for r in last3):
+                suggestions.append(f"You've lost your last {len([r for r in recent5 if r == 'loss'])} games against them — they've found something that works. Try a completely different opening next time.")
+            elif all(r == 'win' for r in last3):
+                suggestions.append(f"You're on a {len([r for r in recent5 if r == 'win'])}-game winning streak against them — whatever you're doing is working, don't overthink it.")
+
+        # 2. Color imbalance
+        white_total = white_wins + white_losses + white_draws
+        black_total = black_wins + black_losses + black_draws
+        if white_total >= 3 and black_total >= 3:
+            white_wr = white_wins / white_total
+            black_wr = black_wins / black_total
+            if white_wr - black_wr > 0.25:
+                suggestions.append(f"You win {round(white_wr*100)}% as White vs {round(black_wr*100)}% as Black against them — you're much stronger with the first move here. Play for the initiative early.")
+            elif black_wr - white_wr > 0.25:
+                suggestions.append(f"You win {round(black_wr*100)}% as Black vs {round(white_wr*100)}% as White against them — you actually do better defending. Stay solid and wait for their mistakes.")
+
+        # 3. Best and worst openings
+        good = [(op, w, l, d) for op, (w, l, d) in opening_results.items() if w + l + d >= 2 and w > l]
+        bad  = [(op, w, l, d) for op, (w, l, d) in opening_results.items() if w + l + d >= 2 and l > w]
+        if good:
+            best = max(good, key=lambda x: x[1] - x[2])
+            suggestions.append(f"You do well in the {best[0]} against them ({best[1]}W-{best[2]}L) — lean into it.")
+        if bad:
+            worst = max(bad, key=lambda x: x[2] - x[1])
+            suggestions.append(f"You struggle in the {worst[0]} against them ({worst[1]}W-{worst[2]}L) — consider avoiding it or preparing it more deeply.")
+
+        # 4. Most-used opening where Andrew also loses — most likely to appear AND most dangerous
+        def dangerous_opening(friend_side_dict):
+            # Filter to openings played >= 2 times, rank by Andrew's loss rate then frequency
+            candidates = [
+                (op, count, opening_results.get(op, [0, 0, 0]))
+                for op, count in friend_side_dict.items()
+                if count >= 2
+            ]
+            if not candidates:
+                return None
+            return max(candidates, key=lambda x: (x[2][1] / max(x[1], 1), x[1]))
+
+        danger_black = dangerous_opening(friend_as_black)
+        if danger_black:
+            op, count, (w, l, d) = danger_black
+            wr_str = f" — you're {w}W-{l}L in it" if w + l > 0 else ''
+            suggestions.append(f"They play the {op} a lot as Black{wr_str}. This is where they hurt you most — prepare your White sidelines against it.")
+        elif friend_as_black:
             fav = max(friend_as_black, key=friend_as_black.get)
-            suggestions.append(f'They play the {fav} as Black — study this line before your next game.')
-        if friend_as_white:
+            w, l, d = opening_results.get(fav, [0, 0, 0])
+            wr_str = f" — you're {w}W-{l}L in it" if w + l > 0 else ''
+            suggestions.append(f"They favour the {fav} as Black{wr_str}. Prepare your White sidelines against it.")
+
+        danger_white = dangerous_opening(friend_as_white)
+        if danger_white:
+            op, count, (w, l, d) = danger_white
+            wr_str = f" — you're {w}W-{l}L in it" if w + l > 0 else ''
+            suggestions.append(f"They play the {op} a lot as White{wr_str}. This is where they hurt you most — have a solid Black response ready.")
+        elif friend_as_white:
             fav = max(friend_as_white, key=friend_as_white.get)
-            suggestions.append(f'They open with the {fav} as White — have a solid response ready.')
+            w, l, d = opening_results.get(fav, [0, 0, 0])
+            wr_str = f" — you're {w}W-{l}L in it" if w + l > 0 else ''
+            suggestions.append(f"They often play the {fav} as White{wr_str}. Have a solid Black response ready.")
+
+        # 5. Accuracy gap vs them
         if andrew_accs and friend_accs:
             a_avg = sum(andrew_accs) / len(andrew_accs)
             f_avg = sum(friend_accs) / len(friend_accs)
             if f_avg > a_avg + 3:
-                suggestions.append(f'They outplay you in accuracy ({f_avg:.1f}% vs {a_avg:.1f}%) — slow down and calculate deeper.')
+                suggestions.append(f"They outaccuracy you in your H2H games ({f_avg:.1f}% vs {a_avg:.1f}%) — they're calculating more carefully. Slow down before committing to moves.")
             elif a_avg > f_avg + 3:
-                suggestions.append(f'You lead in accuracy ({a_avg:.1f}% vs {f_avg:.1f}%) — keep up the precise play.')
-        if friend_wins > andrew_wins:
-            suggestions.append('They currently have the head-to-head edge — study their wins to find patterns to exploit.')
-        elif andrew_wins > friend_wins:
-            suggestions.append("You're ahead head-to-head — keep doing what's working.")
+                suggestions.append(f"You're more accurate than them in your games ({a_avg:.1f}% vs {f_avg:.1f}%) — keep the precision up and convert your advantages.")
+
+        # 6. Rating context from global stats
+        if friend_rapid and andrew_rapid:
+            diff = friend_rapid - andrew_rapid
+            win_pct = round(andrew_wins / total * 100) if total else 0
+            if diff > 100:
+                suggestions.append(f"They're rated {diff} points above you in Rapid globally ({friend_rapid} vs {andrew_rapid}), but you're winning {win_pct}% of your H2H games — that's genuinely impressive.")
+            elif diff < -100:
+                suggestions.append(f"You're rated {-diff} points above them in Rapid globally ({andrew_rapid} vs {friend_rapid}). A win rate of {win_pct}% here is expected — push for higher.")
+            else:
+                suggestions.append(f"You're closely rated in Rapid ({andrew_rapid} vs {friend_rapid}) — these are your most competitive games. Small edge in preparation will decide it.")
 
         return jsonify({
-            'total': len(h2h),
+            'total': total,
             'andrew_wins': andrew_wins,
             'friend_wins': friend_wins,
             'draws': draws,
@@ -325,6 +451,8 @@ def friend_metrics(username):
             'andrew_as_black': sorted(andrew_as_black.items(), key=lambda x: -x[1])[:5],
             'friend_as_white': sorted(friend_as_white.items(), key=lambda x: -x[1])[:5],
             'friend_as_black': sorted(friend_as_black.items(), key=lambda x: -x[1])[:5],
+            'friend_rapid': friend_rapid,
+            'friend_blitz': friend_blitz,
             'suggestions': suggestions,
         })
     except Exception as e:

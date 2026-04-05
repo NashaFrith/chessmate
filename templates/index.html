@@ -192,6 +192,8 @@
         .rating-box { display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .rating-type { font-size: 0.68rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
         .rating-val { font-size: 1.4rem; font-weight: bold; }
+        .record-cycle { font-size: 0.75rem; color: #888; transition: opacity 0.4s; }
+        .record-cycle.fade { opacity: 0; }
 
         #btn-more-stats, #btn-friend-metrics { padding: 8px; background: none; border: 1px solid #333; color: #aaa; font-size: 0.8rem; cursor: pointer; border-radius: 4px; letter-spacing: 1px; }
         #btn-more-stats:hover, #btn-friend-metrics:hover { background: #2a2a2a; color: #f0f0f0; }
@@ -209,6 +211,9 @@
         }
         #friend-screen h1 { font-size: 2rem; margin: 0 0 2px 0; letter-spacing: 2px; }
         #friend-screen h2 { font-size: 0.9rem; font-weight: normal; color: #555; margin: 0 0 20px 0; letter-spacing: 1px; }
+        #friend-suggestions { display: flex; gap: 8px; width: min(400px, calc(100vw - 32px)); margin-bottom: 12px; flex-wrap: wrap; }
+        .friend-suggest-btn { flex: 1; padding: 8px 10px; background: #2a2a2a; border: 1px solid #444; color: #f0f0f0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+        .friend-suggest-btn:hover { background: #3a3a3a; border-color: #81b64c; color: #81b64c; }
         #friend-search-row { display: flex; gap: 8px; width: min(400px, calc(100vw - 32px)); margin-bottom: 20px; }
         #friend-username-input {
             flex: 1; padding: 10px 14px; background: #2a2a2a; border: 1px solid #444;
@@ -757,32 +762,20 @@
         <div id="review-progress-wrap"><div id="review-progress-bar"></div></div>
         <div id="review-stats">
             <div class="ratings-row">
-                <div class="rating-box"><span class="rating-type">Rapid</span><span class="rating-val" id="stat-rapid">—</span></div>
-                <div class="rating-box"><span class="rating-type">Blitz</span><span class="rating-val" id="stat-blitz">—</span></div>
-                <div class="rating-box"><span class="rating-type">Bullet</span><span class="rating-val" id="stat-bullet">—</span></div>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Rapid</span>
-                <div class="record-badges">
-                    <span class="badge-win" id="stat-wins">—W</span>
-                    <span class="badge-loss" id="stat-losses">—L</span>
-                    <span class="badge-draw" id="stat-draws">—D</span>
+                <div class="rating-box">
+                    <span class="rating-type">Rapid</span>
+                    <span class="rating-val" id="stat-rapid">—</span>
+                    <span class="record-cycle" id="stat-rapid-cycle">—</span>
                 </div>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Blitz</span>
-                <div class="record-badges">
-                    <span class="badge-win" id="stat-blitz-wins">—W</span>
-                    <span class="badge-loss" id="stat-blitz-losses">—L</span>
-                    <span class="badge-draw" id="stat-blitz-draws">—D</span>
+                <div class="rating-box">
+                    <span class="rating-type">Blitz</span>
+                    <span class="rating-val" id="stat-blitz">—</span>
+                    <span class="record-cycle" id="stat-blitz-cycle">—</span>
                 </div>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Bullet</span>
-                <div class="record-badges">
-                    <span class="badge-win" id="stat-bullet-wins">—W</span>
-                    <span class="badge-loss" id="stat-bullet-losses">—L</span>
-                    <span class="badge-draw" id="stat-bullet-draws">—D</span>
+                <div class="rating-box">
+                    <span class="rating-type">Bullet</span>
+                    <span class="rating-val" id="stat-bullet">—</span>
+                    <span class="record-cycle" id="stat-bullet-cycle">—</span>
                 </div>
             </div>
             <div class="stat-row" style="align-items:flex-start">
@@ -805,8 +798,9 @@
     <div id="friend-screen">
         <h1>chessmate</h1>
         <h2>FRIEND METRICS</h2>
+        <div id="friend-suggestions"></div>
         <div id="friend-search-row">
-            <input type="text" id="friend-username-input" placeholder="chess.com username" />
+            <input type="text" id="friend-username-input" placeholder="or type any username" />
             <button id="btn-friend-lookup">Go</button>
         </div>
         <div id="friend-results"></div>

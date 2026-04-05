@@ -1,10 +1,16 @@
 const fartCtx = new AudioContext();
 let fartBuffer = null;
+let moveBuffer = null;
 
 fetch('/static/audio/fart.mp3')
     .then(r => r.arrayBuffer())
     .then(buf => fartCtx.decodeAudioData(buf))
     .then(audioBuffer => { fartBuffer = audioBuffer; });
+
+fetch('/static/audio/move.mp3')
+    .then(r => r.arrayBuffer())
+    .then(buf => fartCtx.decodeAudioData(buf))
+    .then(audioBuffer => { moveBuffer = audioBuffer; });
 
 function playFart() {
     if (!fartBuffer) return;
@@ -13,6 +19,14 @@ function playFart() {
     source.playbackRate.value = 1.5;
     source.connect(fartCtx.destination);
     source.start(0, 44, 1);
+}
+
+function playMove() {
+    if (!moveBuffer) return;
+    const source = fartCtx.createBufferSource();
+    source.buffer = moveBuffer;
+    source.connect(fartCtx.destination);
+    source.start(0);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -183,7 +197,6 @@ document.addEventListener("DOMContentLoaded", () => {
             "Is that the Italian? Of course it is lol.",
             "Did you google that?",
             "Hmm. I've seen worse from you.",
-            "Something something THE ROOK (I'm gonna keep saying this and pray it's applicable at least once)"
         ],
         playerMoved_winning: [
             "Okay okay, chill bb :( ",
@@ -193,7 +206,6 @@ document.addEventListener("DOMContentLoaded", () => {
             "Damn....you single?",
             "I was born like two weeks ago please :(",
             "It's giving Hikaru",
-            "You're winning with...THE ROOOOK?? (I'm gonna keep saying this and pray it's applicable at least once)"
         ],
         playerMoved_losing: [
             "Babe...oh no.",
@@ -202,7 +214,6 @@ document.addEventListener("DOMContentLoaded", () => {
             "A 1400 playing like an 800 today, huh?",
             "Don't worry, you can still bench press me. (wait...can you?)",
             "It's not giving Hikaru :(",
-            "Oh no I ate THE ROOk I was hungry (I'm gonna keep saying this and pray it's applicable at least once)"
 
         ],
         aiMoved: [
@@ -210,7 +221,6 @@ document.addEventListener("DOMContentLoaded", () => {
             "Go! Go!Go!Go! (while jumping up and down)",
             "Don't overthink it bb!",
             "I moved, yippee! Your turn :)",
-            "THE...uhh...THE ROOK (I'm gonna keep saying this and pray it's applicable at least once)"
         ],
         aiMoved_winning: [
             "You okay baby? You look a little... stressed.",
@@ -236,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "Brrrrrprprprprprpr",
             "Dang that's a wet one",
             "Stinky",
-            "Not silent, still deadly"
+            "Not silent, still deadly",
         ],
         slowMove: [
             "Andrew. ANDREW. HELLO???",
@@ -251,6 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "I thought we were having fun :(",
             "I know chess is hard but you can do it Andrew, I believe in you!",
             "You hate me? :(",
+            "We have to play fast bro",
         ],
         gameOver_win: [
             "Ooooo good job baby!",
@@ -661,7 +672,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="streak-box">
                 <div class="streak-label">Best Win Streak</div>
                 <div class="streak-value">${str.best || '—'}</div>
-                <div class="streak-sub">last 3 months</div>
+                <div class="streak-sub"></div>
             </div>
             <div class="streak-box">
                 <div class="streak-label">Avg Game Length</div>
@@ -787,6 +798,33 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('btn-friend-metrics').addEventListener('click', () => {
         reviewSelectScreen.style.display = 'none';
         friendScreen.style.display = 'flex';
+
+        // Compute top 3 opponents by recency-weighted game count (90-day half-life)
+        const now = Date.now() / 1000;
+        const halfLife = 90 * 24 * 3600;
+        const scores = {};
+        reviewGames.forEach(g => {
+            if (!g.opponent) return;
+            const daysDecay = Math.exp(-Math.LN2 * (now - g.date) / halfLife);
+            scores[g.opponent] = (scores[g.opponent] || 0) + daysDecay;
+        });
+        const top3 = Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const suggestEl = document.getElementById('friend-suggestions');
+        suggestEl.innerHTML = '';
+        // Count raw games per opponent for display
+        const rawCounts = {};
+        reviewGames.forEach(g => { if (g.opponent) rawCounts[g.opponent] = (rawCounts[g.opponent] || 0) + 1; });
+
+        top3.forEach(([name]) => {
+            const btn = document.createElement('button');
+            btn.className = 'friend-suggest-btn';
+            btn.textContent = `${name} (${rawCounts[name]})`;
+            btn.addEventListener('click', () => {
+                document.getElementById('friend-username-input').value = name;
+                lookupFriend();
+            });
+            suggestEl.appendChild(btn);
+        });
     });
 
     document.getElementById('btn-friend-back').addEventListener('click', () => {
@@ -814,7 +852,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         r.innerHTML = `
             <div class="friend-card">
-                <div class="friend-card-title">Head-to-Head vs ${username} · ${total} game${total !== 1 ? 's' : ''}</div>
+                <div class="friend-card-title">Head-to-Head vs ${username} · ${total} game${total !== 1 ? 's' : ''}${data.friend_rapid ? ` · ${data.friend_rapid} Rapid` : ''}</div>
                 <div class="friend-h2h">
                     <div class="friend-h2h-val">
                         <div class="big" style="color:#81b64c">${data.andrew_wins}</div>
@@ -1127,15 +1165,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('stat-rapid').textContent  = s.rapid_rating  || '—';
                 document.getElementById('stat-blitz').textContent  = s.blitz_rating  || '—';
                 document.getElementById('stat-bullet').textContent = s.bullet_rating || '—';
-                document.getElementById('stat-wins').textContent         = `${s.wins}W`;
-                document.getElementById('stat-losses').textContent       = `${s.losses}L`;
-                document.getElementById('stat-draws').textContent        = `${s.draws}D`;
-                document.getElementById('stat-blitz-wins').textContent   = `${s.blitz_wins}W`;
-                document.getElementById('stat-blitz-losses').textContent = `${s.blitz_losses}L`;
-                document.getElementById('stat-blitz-draws').textContent  = `${s.blitz_draws}D`;
-                document.getElementById('stat-bullet-wins').textContent   = `${s.bullet_wins}W`;
-                document.getElementById('stat-bullet-losses').textContent = `${s.bullet_losses}L`;
-                document.getElementById('stat-bullet-draws').textContent  = `${s.bullet_draws}D`;
+
+                function startRecordCycle(elId, wins, losses, draws) {
+                    const el = document.getElementById(elId);
+                    const steps = [
+                        { text: `${wins}W`,   color: '#81b64c' },
+                        { text: `${losses}L`, color: '#e74c3c' },
+                        { text: `${draws}D`,  color: '#888' },
+                    ];
+                    let i = 0;
+                    el.textContent = steps[0].text;
+                    el.style.color = steps[0].color;
+                    setInterval(() => {
+                        el.classList.add('fade');
+                        setTimeout(() => {
+                            i = (i + 1) % steps.length;
+                            el.textContent = steps[i].text;
+                            el.style.color = steps[i].color;
+                            el.classList.remove('fade');
+                        }, 400);
+                    }, 2500);
+                }
+                startRecordCycle('stat-rapid-cycle',  s.wins,        s.losses,        s.draws);
+                startRecordCycle('stat-blitz-cycle',  s.blitz_wins,  s.blitz_losses,  s.blitz_draws);
+                startRecordCycle('stat-bullet-cycle', s.bullet_wins, s.bullet_losses, s.bullet_draws);
                 document.getElementById('stat-openings').innerHTML = s.top_openings.length
                     ? s.top_openings.slice(0, 3).map(([name, count]) => `<span>${name} <span style="color:#666">(${count})</span></span>`).join('')
                     : '<span>—</span>';
@@ -1174,12 +1227,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         ? longGames.filter(g => g.result === 'win').length / longGames.length * 100
                         : 50;
 
-                    // Aggression: shorter decisive games → more aggressive (avg moves <25 = 100, >60 = 0)
-                    const decisive = all.filter(g => g.result !== 'draw' && g.move_count > 0);
-                    const avgMoves = decisive.length
-                        ? decisive.reduce((s, g) => s + g.move_count, 0) / decisive.length
-                        : 40;
-                    const aggressionScore = Math.max(0, Math.min(100, (60 - avgMoves) / 35 * 100));
+                    // Upset Rate: win rate against higher-rated opponents
+                    const upsetGames = all.filter(g => g.opponent_rating > g.andrew_rating);
+                    const upsetScore = upsetGames.length
+                        ? upsetGames.filter(g => g.result === 'win').length / upsetGames.length * 100
+                        : 50;
 
                     // Speed: win rate in blitz + bullet
                     const speedGames = all.filter(g => g.time_class === 'blitz' || g.time_class === 'bullet');
@@ -1187,8 +1239,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         ? speedGames.filter(g => g.result === 'win').length / speedGames.length * 100
                         : 50;
 
-                    const radarLabels = ['Win Rate', 'Accuracy', 'Consistency', 'Opening\nVariety', 'Endgame\nSkill', 'Aggression', 'Speed'];
-                    const radarValues = [winRate, accuracyScore, consistencyScore, varietyScore, endgameScore, aggressionScore, speedScore].map(v => Math.round(v));
+                    const radarLabels = ['Win Rate', 'Accuracy', 'Consistency', 'Opening\nVariety', 'Endgame\nSkill', 'Upset Rate', 'Speed'];
+                    const radarValues = [winRate, accuracyScore, consistencyScore, varietyScore, endgameScore, upsetScore, speedScore].map(v => Math.round(v));
 
                     if (radarChart) radarChart.destroy();
                     radarChart = mkChart('profile-radar-chart', {
@@ -1295,6 +1347,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     isItalian = data.is_italian;
                     if (!newlyItalian) setQuip('playerMoved', data.eval_score);
                     currentFen = data.fen;
+                    playMove();
                     board.position(data.player_fen, false);
                     clearCheckHighlight();
                     if (!data.ai_move) {
@@ -1306,6 +1359,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             const thinkTime = 3000 + Math.random() * 2000;
                             setTimeout(() => {
                                 stopThinking();
+                                playMove();
                                 board.position(data.fen);
                                 if (data.rook_captured) {
                                     quip.textContent = "Did you sacrifice, THE ROOK???...or did I just take it lol";
