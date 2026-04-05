@@ -30,30 +30,6 @@ function playMove() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // ── Password gate ─────────────────────────────────────────────
-    const PASSWORD = 'chessmates';
-    const pwGate  = document.getElementById('password-gate');
-    const pwInput = document.getElementById('pw-input');
-    const pwBtn   = document.getElementById('pw-submit');
-    const pwError = document.getElementById('pw-error');
-
-    function unlockApp() { pwGate.style.display = 'none'; }
-    if (sessionStorage.getItem('cm_auth') === '1') { unlockApp(); }
-
-    function tryPassword() {
-        if (pwInput.value === PASSWORD) {
-            sessionStorage.setItem('cm_auth', '1');
-            unlockApp();
-        } else {
-            pwError.textContent = 'wrong password, try again';
-            pwInput.value = '';
-            pwInput.focus();
-        }
-    }
-    pwBtn.addEventListener('click', tryPassword);
-    pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryPassword(); });
-    // ── End password gate ─────────────────────────────────────────
-
     const difficultyScreen = document.getElementById('difficulty-screen');
 
     const loadingScreen = document.getElementById('loading-screen');

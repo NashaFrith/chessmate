@@ -1,4 +1,6 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for
+from functools import wraps
+import os
 import chess
 import chess.engine
 import chess.pgn
@@ -9,7 +11,19 @@ import requests as http
 from chessdude import ChessDude
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.secret_key = os.environ.get('SECRET_KEY', 'chessmate-dev-secret')
+APP_PASSWORD = os.environ.get('APP_PASSWORD', 'chessmates')
 engine = None
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('authenticated'):
+            if request.is_json or request.path.startswith('/review') or request.path.startswith('/move') or request.path.startswith('/reset'):
+                return jsonify({'error': 'Unauthorized'}), 401
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
 
 def get_engine():
     global engine
@@ -17,17 +31,35 @@ def get_engine():
         engine = ChessDude()
     return engine
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        if request.form.get('password') == APP_PASSWORD:
+            session['authenticated'] = True
+            return redirect(url_for('home'))
+        error = 'wrong password, try again'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/')
+@require_auth
 def home():
     return render_template('index.html')
 
 @app.route("/reset", methods=["POST"])
+@require_auth
 def reset():
     data = request.json or {}
     get_engine().reset(data.get('difficulty', 'medium'))
     return jsonify({"status": "ok"})
 
 @app.route("/move", methods=["POST"])
+@require_auth
 def make_move():
     e = get_engine()
     data = request.json
@@ -133,6 +165,7 @@ def parse_pgn(pgn_text):
     return fens, moves
 
 @app.route('/review/games')
+@require_auth
 def get_review_games():
     try:
         archives = http.get(
@@ -247,6 +280,7 @@ def get_review_games():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/review/friend/<username>')
+@require_auth
 def friend_metrics(username):
     try:
         # Fetch Andrew's archives and friend's stats in parallel-ish
@@ -460,6 +494,7 @@ def friend_metrics(username):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/review/eval', methods=['POST'])
+@require_auth
 def get_review_eval():
     data = request.json or {}
     fen = data.get('fen')
