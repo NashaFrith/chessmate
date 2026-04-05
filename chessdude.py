@@ -162,17 +162,17 @@ class ChessDude:
         self.board = chess.Board()
         self.turn = 'w'
         if difficulty == 'test':
-            self.think_time = 0.001
-            self.sf.configure({"UCI_LimitStrength": False, "Skill Level": 0})
+            self.think_time = 0.05
+            self.sf.configure({"UCI_LimitStrength": False, "Skill Level": 1})
         elif difficulty == 'easy':
-            self.think_time = 0.01
-            self.sf.configure({"UCI_LimitStrength": False})
+            self.think_time = 0.1
+            self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 800, "Skill Level": 3})
         elif difficulty == 'hard':
             self.think_time = 0.1
-            self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 1600})
+            self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 1500, "Skill Level": 14})
         else:
             self.think_time = 0.1
-            self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 1320})
+            self.sf.configure({"UCI_LimitStrength": True, "UCI_Elo": 1200, "Skill Level": 8})
 
     def make_move_uci(self, from_sq, to_sq):
         try:
