@@ -216,6 +216,7 @@ def get_review_games():
                 'time_class': g.get('time_class', 'rapid'),
                 'andrew_rating': side.get('rating', 0),
                 'opponent_rating': opp_side.get('rating', 0),
+                'opponent': opp_side.get('username', ''),
                 'accuracy': g.get('accuracies', {}).get('white' if is_w else 'black'),
                 'opening': opening_from_pgn(pgn_text),
                 'move_count': max(move_nums) if move_nums else 0,

@@ -672,7 +672,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="streak-box">
                 <div class="streak-label">Best Win Streak</div>
                 <div class="streak-value">${str.best || '—'}</div>
-                <div class="streak-sub"></div>
+                <div class="streak-sub">wins</div>
             </div>
             <div class="streak-box">
                 <div class="streak-label">Avg Game Length</div>
@@ -802,18 +802,18 @@ document.addEventListener("DOMContentLoaded", () => {
         // Compute top 3 opponents by recency-weighted game count (90-day half-life)
         const now = Date.now() / 1000;
         const halfLife = 90 * 24 * 3600;
+        // Uses reviewChartData (full history, no 30-game cap)
         const scores = {};
-        reviewGames.forEach(g => {
+        const rawCounts = {};
+        reviewChartData.forEach(g => {
             if (!g.opponent) return;
-            const daysDecay = Math.exp(-Math.LN2 * (now - g.date) / halfLife);
-            scores[g.opponent] = (scores[g.opponent] || 0) + daysDecay;
+            const decay = Math.exp(-Math.LN2 * (now - g.date) / halfLife);
+            scores[g.opponent] = (scores[g.opponent] || 0) + decay;
+            rawCounts[g.opponent] = (rawCounts[g.opponent] || 0) + 1;
         });
         const top3 = Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, 3);
         const suggestEl = document.getElementById('friend-suggestions');
         suggestEl.innerHTML = '';
-        // Count raw games per opponent for display
-        const rawCounts = {};
-        reviewGames.forEach(g => { if (g.opponent) rawCounts[g.opponent] = (rawCounts[g.opponent] || 0) + 1; });
 
         top3.forEach(([name]) => {
             const btn = document.createElement('button');
@@ -905,9 +905,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     // ── End friend metrics screen ─────────────────────────────────
 
-    function setReviewQuip(category) {
+    const classLabel = {
+        book:                   'B  Book move',
+        best:                   '✓  Best move',
+        excellent:              '!  Excellent',
+        inaccuracy:             '?!  Inaccuracy',
+        mistake:                '?  Mistake',
+        blunder:                '??  Blunder',
+        review_sacrifice_rook:  '!!  Rook sacrifice',
+        review_sacrifice_queen: '!!  Queen sacrifice',
+    };
+
+    function setReviewQuip(category, classification = null) {
         const pool = quips[category] || [];
         reviewQuip.textContent = pool[Math.floor(Math.random() * pool.length)] || '';
+        const labelEl = document.getElementById('review-move-label');
+        const key = classification || (classLabel[category] ? category : null);
+        labelEl.textContent = key ? classLabel[key] || '' : '';
+        labelEl.className = classification || '';
     }
 
     function evalToPercent(score) {
@@ -1016,6 +1031,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentMoveIdx = Math.max(0, Math.min(idx, currentGame.fens.length - 1));
         const fen = currentGame.fens[currentMoveIdx];
 
+        if (currentMoveIdx > 0) playMove();
         reviewBoardObj.position(fen, false);
         reviewMoveCounter.textContent = `Move ${currentMoveIdx} / ${currentGame.moves.length}`;
 
@@ -1054,14 +1070,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     const sacrifice = (classification === 'best' || classification === 'excellent')
                         ? detectSacrifice(currentGame, currentMoveIdx)
                         : null;
-                    if      (sacrifice === 'queen')           setReviewQuip('review_sacrifice_queen');
-                    else if (sacrifice === 'rook')            setReviewQuip('review_sacrifice_rook');
-                    else if (classification === 'blunder')    setReviewQuip('review_blunder');
-                    else if (classification === 'mistake')    setReviewQuip('review_mistake');
-                    else if (classification === 'inaccuracy') setReviewQuip('review_mistake');
-                    else if (classification === 'best')       setReviewQuip('review_best');
-                    else if (classification === 'book')       setReviewQuip('review_book');
-                    else                                      setReviewQuip('review_good');
+                    if      (sacrifice === 'queen')           setReviewQuip('review_sacrifice_queen', 'review_sacrifice_queen');
+                    else if (sacrifice === 'rook')            setReviewQuip('review_sacrifice_rook',  'review_sacrifice_rook');
+                    else if (classification === 'blunder')    setReviewQuip('review_blunder',    'blunder');
+                    else if (classification === 'mistake')    setReviewQuip('review_mistake',    'mistake');
+                    else if (classification === 'inaccuracy') setReviewQuip('review_mistake',    'inaccuracy');
+                    else if (classification === 'best')       setReviewQuip('review_best',       'best');
+                    else if (classification === 'book')       setReviewQuip('review_book',       'book');
+                    else                                      setReviewQuip('review_good',       'excellent');
                 }
             }
         }
@@ -1090,7 +1106,7 @@ document.addEventListener("DOMContentLoaded", () => {
         reviewEvalFill.style.height = '50%';
 
         const resultQuip = { win: 'review_win', loss: 'review_loss', draw: 'review_draw' }[game.result] || 'review_load';
-        setReviewQuip(resultQuip);
+        setReviewQuip(resultQuip, null);
 
         renderMoveList(game);
         goToMove(0);
