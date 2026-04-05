@@ -1434,7 +1434,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 reviewEvalFill.style.height = evalToPercent(evalData.eval ?? 0) + '%';
                 setReviewQuip('review_good', null);
             },
-            onSnapEnd: () => { if (exploreFen) reviewBoardObj.position(exploreFen, false); }
+            onSnapEnd: () => {}
         });
     }
     // ── End explore mode ──────────────────────────────────────────
