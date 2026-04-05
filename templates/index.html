@@ -463,13 +463,15 @@
             border-radius: 6px;
             padding: 8px 12px;
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            gap: 6px;
+            box-sizing: border-box;
         }
-        #explore-label { font-size: 0.75rem; color: #81b64c; letter-spacing: 1px; text-transform: uppercase; }
-        #explore-controls { display: flex; gap: 6px; }
-        #explore-controls button { padding: 5px 10px; font-size: 0.78rem; border: 1px solid #81b64c; background: none; color: #81b64c; border-radius: 4px; cursor: pointer; }
+        #explore-label { font-size: 0.7rem; color: #81b64c; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+        #explore-controls { display: flex; gap: 6px; flex: 1; justify-content: flex-end; }
+        #explore-controls button { padding: 6px 10px; font-size: 0.75rem; border: 1px solid #81b64c; background: none; color: #81b64c; border-radius: 4px; cursor: pointer; white-space: nowrap; }
         #explore-controls button:hover { background: #81b64c; color: #1a1a1a; }
 
         #review-move-list {
