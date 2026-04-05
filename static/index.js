@@ -1406,13 +1406,15 @@ document.addEventListener("DOMContentLoaded", () => {
             position: 'start',
             pieceTheme: '/static/img/chesspieces/wikipedia/{piece}.png',
             draggable: true,
-            onDragStart: (_source) => {
+            onDragStart: (_source, piece) => {
                 if (!currentGame) return false;
                 if (!isExploring) {
-                    // Enter explore mode from current position
                     enterExplore(currentGame.fens[currentMoveIdx]);
                 }
-                return true;
+                // Only allow the side whose turn it is in the current explore position
+                const turn = exploreFen.split(' ')[1]; // 'w' or 'b'
+                const pieceColor = piece[0]; // 'w' or 'b'
+                return pieceColor === turn;
             },
             onDrop: async (source, target) => {
                 if (source === target) return 'snapback';
