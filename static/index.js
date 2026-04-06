@@ -925,8 +925,6 @@ document.addEventListener("DOMContentLoaded", () => {
         review_sacrifice_queen: '!!  Queen sacrifice',
     };
 
-    let currentQuipAudio = null;
-
     function setReviewQuip(category, classification = null) {
         const pool = quips[category] || [];
         reviewQuip.textContent = pool[Math.floor(Math.random() * pool.length)] || '';
@@ -934,13 +932,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const key = classification || (classLabel[category] ? category : null);
         labelEl.textContent = key ? classLabel[key] || '' : '';
         labelEl.className = classification || '';
-
-        // Play voice quip audio
-        const audioKey = category.replace('review_sacrifice_', 'sacrifice_');
-        const src = `/static/audio/quips/${audioKey}.m4a`;
-        if (currentQuipAudio) { currentQuipAudio.pause(); currentQuipAudio.currentTime = 0; }
-        currentQuipAudio = new Audio(src);
-        currentQuipAudio.play().catch(() => {});
     }
 
     function evalToPercent(score) {
@@ -1190,9 +1181,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const pool = quips.review_load;
         loadingQuipEl.textContent = pool[Math.floor(Math.random() * pool.length)];
-        if (currentQuipAudio) { currentQuipAudio.pause(); currentQuipAudio.currentTime = 0; }
-        currentQuipAudio = new Audio('/static/audio/quips/review_load.m4a');
-        currentQuipAudio.play().catch(() => {});
         progressBar.style.transition = 'none';
         progressBar.style.width = '0%';
         setTimeout(() => {
