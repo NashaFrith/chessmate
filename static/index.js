@@ -935,10 +935,9 @@ document.addEventListener("DOMContentLoaded", () => {
         labelEl.textContent = key ? classLabel[key] || '' : '';
         labelEl.className = classification || '';
 
-        // Play voice quip audio (randomly pick one of 3 takes)
+        // Play voice quip audio
         const audioKey = category.replace('review_sacrifice_', 'sacrifice_');
-        const take = Math.floor(Math.random() * 3) + 1;
-        const src = `/static/audio/quips/${audioKey}_${take}.m4a`;
+        const src = `/static/audio/quips/${audioKey}.m4a`;
         if (currentQuipAudio) { currentQuipAudio.pause(); currentQuipAudio.currentTime = 0; }
         currentQuipAudio = new Audio(src);
         currentQuipAudio.play().catch(() => {});
@@ -1192,8 +1191,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const pool = quips.review_load;
         loadingQuipEl.textContent = pool[Math.floor(Math.random() * pool.length)];
         if (currentQuipAudio) { currentQuipAudio.pause(); currentQuipAudio.currentTime = 0; }
-        const loadTake = Math.floor(Math.random() * 3) + 1;
-        currentQuipAudio = new Audio(`/static/audio/quips/review_load_${loadTake}.m4a`);
+        currentQuipAudio = new Audio('/static/audio/quips/review_load.m4a');
         currentQuipAudio.play().catch(() => {});
         progressBar.style.transition = 'none';
         progressBar.style.width = '0%';
