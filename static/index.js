@@ -286,6 +286,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "Not bad, not bad!",
             "Pretty good move baby",
             "Wooooo, awesome!",
+            "I like that one",
+            "That was a good one, huh?",
+            "Nice one!",
         ],
         review_sacrifice_rook: [
             "Omg you did the thing you sacrificed...THE ROOOOOOOK",
@@ -297,8 +300,10 @@ document.addEventListener("DOMContentLoaded", () => {
             "That's exactly what we needed.",
             "Best move. Smooth!",
             "You found it! The best one.",
-            "Okay Hikaru calm down.",
-            "I would've played that. So would you. Love that.",
+            "Okay Hikaru calm down. (wait is that good or bad now)",
+            "I would've played that. Love that.",
+            "That was the move I was hoping you'd find.",
+            "You make me proud!",
         ],
         review_book: [
             "You know your theory!",
@@ -311,7 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "They blundered! Don't let it go to waste.",
             "Oh they messed up. Your move.",
             "Free real estate.",
-            "That was a gift. Take it.",
+            "Take it.",
         ],
         opp_mistake: [
             "They slipped a little there.",
@@ -1395,6 +1400,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function exitExplore() {
         isExploring = false;
         exploreFen  = null;
+        if (selectedSquare) {
+            $('#review-board-el [data-square]').removeClass('selected-square');
+            selectedSquare = null;
+        }
         exploreBanner.style.display = 'none';
         hideReviewGameOver();
         if (currentGame) goToMove(currentMoveIdx);
@@ -1428,6 +1437,34 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Wire review board draggable behaviour for explore
+    let selectedSquare = null;
+
+    async function exploreMove(source, target) {
+        if (!isExploring) {
+            enterExplore(currentGame.fens[currentMoveIdx]);
+        }
+        const res = await fetch('/review/explore/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fen: exploreFen, from: source, to: target })
+        });
+        const data = await res.json();
+        if (data.error) { playFart(); return false; }
+        playMove();
+        exploreFen = data.fen;
+        reviewBoardObj.position(data.fen, false);
+        const evalRes = await fetch('/review/eval', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fen: exploreFen })
+        });
+        const evalData = await evalRes.json();
+        reviewEvalFill.style.height = evalToPercent(evalData.eval ?? 0) + '%';
+        if (data.game_over) { showReviewGameOver(data.result, true); return true; }
+        setReviewQuip('review_good', null);
+        return true;
+    }
+
     function initReviewBoard() {
         if (reviewBoardObj) return;
         reviewBoardObj = Chessboard('review-board-el', {
@@ -1439,33 +1476,58 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!isExploring) {
                     enterExplore(currentGame.fens[currentMoveIdx]);
                 }
-                // Only allow the side whose turn it is in the current explore position
-                const turn = exploreFen.split(' ')[1]; // 'w' or 'b'
-                const pieceColor = piece[0]; // 'w' or 'b'
+                selectedSquare = null;
+                $('#review-board-el [data-square]').removeClass('selected-square');
+                const turn = exploreFen.split(' ')[1];
+                const pieceColor = piece[0];
                 return pieceColor === turn;
             },
             onDrop: async (source, target) => {
                 if (source === target) return 'snapback';
-                const res = await fetch('/review/explore/move', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fen: exploreFen, from: source, to: target })
-                });
-                const data = await res.json();
-                if (data.error) { playFart(); return 'snapback'; }
-                playMove();
-                exploreFen = data.fen;
-                const evalRes = await fetch('/review/eval', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fen: exploreFen })
-                });
-                const evalData = await evalRes.json();
-                reviewEvalFill.style.height = evalToPercent(evalData.eval ?? 0) + '%';
-                if (data.game_over) { showReviewGameOver(data.result, true); return; }
-                setReviewQuip('review_good', null);
+                const ok = await exploreMove(source, target);
+                if (!ok) return 'snapback';
             },
             onSnapEnd: () => {}
+        });
+
+        // Click-to-move: chessboard.js has no onSquareClick, wire manually
+        $('#review-board-el').on('click', '[data-square]', async function () {
+            if (!currentGame) return;
+            const square = $(this).data('square');
+            const fen = isExploring ? exploreFen : currentGame.fens[currentMoveIdx];
+            const turn = fen.split(' ')[1];
+
+            if (selectedSquare) {
+                if (selectedSquare === square) {
+                    // Deselect
+                    $('#review-board-el [data-square]').removeClass('selected-square');
+                    selectedSquare = null;
+                    return;
+                }
+                // Check if clicking own piece — switch selection
+                const pieces = reviewBoardObj.position();
+                const clickedPiece = pieces[square];
+                if (clickedPiece && clickedPiece[0] === turn) {
+                    $('#review-board-el [data-square]').removeClass('selected-square');
+                    selectedSquare = square;
+                    $(this).addClass('selected-square');
+                    return;
+                }
+                // Attempt the move
+                const from = selectedSquare;
+                $('#review-board-el [data-square]').removeClass('selected-square');
+                selectedSquare = null;
+                await exploreMove(from, square);
+            } else {
+                // First click — select if correct color piece
+                const pieces = reviewBoardObj.position();
+                const piece = pieces[square];
+                if (!piece || piece[0] !== turn) return;
+                if (!isExploring) enterExplore(currentGame.fens[currentMoveIdx]);
+                selectedSquare = square;
+                $('#review-board-el [data-square]').removeClass('selected-square');
+                $(this).addClass('selected-square');
+            }
         });
     }
     // ── End explore mode ──────────────────────────────────────────
