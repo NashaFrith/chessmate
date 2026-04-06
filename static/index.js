@@ -64,6 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }).then(() => {
             loadingScreen.classList.remove('visible');
             waitingForAI = false;
+            selectedGameSquare = null;
+            $('#board [data-square]').removeClass('selected-square');
             setQuip('gameStart');
         });
     }
@@ -1612,6 +1614,110 @@ document.addEventListener("DOMContentLoaded", () => {
                 turnIndicator.textContent = "Andrew's Turn";
                 waitingForAI = false;
             });
+        }
+    });
+
+    // Click-to-move for main game board
+    let selectedGameSquare = null;
+
+    function makeGameMove(source, target) {
+        if (waitingForAI) return;
+        turnIndicator.textContent = "Nasha's Turn";
+        fetch("/move", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ from: source, to: target })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                playFart();
+                setQuip('illegal');
+                board.position(currentFen);
+                turnIndicator.textContent = "Andrew's Turn";
+            } else if (data.status === "Move made") {
+                clearSlowMoveTimer();
+                const newlyItalian = !isItalian && data.is_italian;
+                isItalian = data.is_italian;
+                if (!newlyItalian) setQuip('playerMoved', data.eval_score);
+                currentFen = data.fen;
+                playMove();
+                board.position(data.player_fen, false);
+                clearCheckHighlight();
+                if (!data.ai_move) {
+                    turnIndicator.textContent = "Andrew's Turn";
+                } else {
+                    waitingForAI = true;
+                    setTimeout(() => {
+                        startThinking();
+                        const thinkTime = 3000 + Math.random() * 2000;
+                        setTimeout(() => {
+                            stopThinking();
+                            playMove();
+                            board.position(data.fen);
+                            if (data.rook_captured) {
+                                quip.textContent = "Did you sacrifice, THE ROOK???...or did I just take it lol";
+                            } else if (newlyItalian) {
+                                setQuip('playerMoved', data.eval_score, true);
+                            } else {
+                                setQuip('aiMoved', data.eval_score);
+                            }
+                            turnIndicator.textContent = "Andrew's Turn";
+                            startSlowMoveTimer();
+                            if (data.check_square) {
+                                showCheckHighlight(data.check_square);
+                            } else {
+                                clearCheckHighlight();
+                            }
+                            waitingForAI = false;
+                        }, thinkTime);
+                    }, 3000);
+                }
+            } else if (data.status === "Game Over") {
+                clearSlowMoveTimer();
+                currentFen = data.fen;
+                board.position(data.fen);
+                setTimeout(() => showGameOver(data.result), 800);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            board.position(currentFen);
+            turnIndicator.textContent = "Andrew's Turn";
+            waitingForAI = false;
+        });
+    }
+
+    $('#board').on('click', '[data-square]', function () {
+        if (waitingForAI) return;
+        const square = $(this).data('square');
+        const pieces = board.position();
+        const piece = pieces[square];
+
+        if (selectedGameSquare) {
+            if (selectedGameSquare === square) {
+                $('#board [data-square]').removeClass('selected-square');
+                selectedGameSquare = null;
+                return;
+            }
+            // Switch selection if clicking another white piece
+            if (piece && piece[0] === 'w') {
+                $('#board [data-square]').removeClass('selected-square');
+                selectedGameSquare = square;
+                $(this).addClass('selected-square');
+                return;
+            }
+            // Attempt move
+            const from = selectedGameSquare;
+            $('#board [data-square]').removeClass('selected-square');
+            selectedGameSquare = null;
+            makeGameMove(from, square);
+        } else {
+            if (!piece || piece[0] !== 'w') return;
+            if (fartCtx.state === 'suspended') fartCtx.resume();
+            selectedGameSquare = square;
+            $('#board [data-square]').removeClass('selected-square');
+            $(this).addClass('selected-square');
         }
     });
 });
