@@ -527,7 +527,7 @@ def explore_move():
             return jsonify({'error': 'Illegal move'}), 400
         san = board.san(move)
         board.push(move)
-        return jsonify({'fen': board.fen(), 'san': san})
+        return jsonify({'fen': board.fen(), 'san': san, 'game_over': board.is_game_over(), 'result': board.result() if board.is_game_over() else None})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -549,7 +549,7 @@ def explore_best_move():
         score_result = get_engine().sf.play(board, chess.engine.Limit(time=0.05), info=chess.engine.INFO_SCORE)
         score = score_result.info.get('score')
         eval_val = score.white().score(mate_score=10000) if score else 0
-        return jsonify({'fen': board.fen(), 'move': move.uci(), 'san': san, 'eval': eval_val})
+        return jsonify({'fen': board.fen(), 'move': move.uci(), 'san': san, 'eval': eval_val, 'game_over': board.is_game_over(), 'result': board.result() if board.is_game_over() else None})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

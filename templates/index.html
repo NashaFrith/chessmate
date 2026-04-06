@@ -453,7 +453,20 @@
         }
 
         #review-controls button:hover { background: #333; }
-        #review-controls button:disabled { opacity: 0.3; cursor: default; }
+        #review-controls button:disabled { opacity: 0.2; cursor: default; }
+
+        #review-game-over-banner {
+            width: min(400px, calc(100vw - 32px));
+            margin: 6px auto;
+            background: #2a2a2a;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 10px 16px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #aaa;
+            letter-spacing: 1px;
+        }
 
         #explore-banner {
             width: min(400px, calc(100vw - 32px));
@@ -875,6 +888,9 @@
             </div>
         </div>
         <div id="review-move-list"></div>
+        <div id="review-game-over-banner" style="display:none">
+            <span id="review-game-over-text"></span>
+        </div>
         <button class="review-back-btn" id="btn-rv-to-list">← back to games</button>
     </div>
 

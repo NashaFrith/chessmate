@@ -1056,6 +1056,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (currentMoveIdx === currentGame.fens.length - 1) {
             document.getElementById('btn-rv-end').disabled = true;
             document.getElementById('btn-rv-next').disabled = true;
+            const resultMap = { win: '1-0', loss: '0-1', draw: '1/2-1/2' };
+            showReviewGameOver(resultMap[currentGame.result] || '1/2-1/2', false);
+        } else {
+            hideReviewGameOver();
         }
 
         const evalNow = await fetchEval(fen);
@@ -1125,6 +1129,7 @@ document.addEventListener("DOMContentLoaded", () => {
         reviewInfoBar.textContent = `${game.white} vs ${game.black} · ${resultLabel}${game.opening ? ' · ' + game.opening : ''}`;
         reviewEvalFill.style.height = '50%';
 
+        hideReviewGameOver();
         const resultQuip = { win: 'review_win', loss: 'review_loss', draw: 'review_draw' }[game.result] || 'review_load';
         setReviewQuip(resultQuip, null);
 
@@ -1354,6 +1359,26 @@ document.addEventListener("DOMContentLoaded", () => {
     let exploreFen  = null;
     const exploreBanner = document.getElementById('explore-banner');
 
+    const reviewGameOverBanner = document.getElementById('review-game-over-banner');
+    const reviewGameOverText   = document.getElementById('review-game-over-text');
+
+    function showReviewGameOver(result, inExplore = false) {
+        const prefix = inExplore ? 'Variation ends — ' : 'Game over — ';
+        const label = result === '1-0' ? 'White wins'
+                    : result === '0-1' ? 'Black wins'
+                    : 'Draw';
+        reviewGameOverText.textContent = prefix + label;
+        reviewGameOverBanner.style.display = 'block';
+        if (inExplore) {
+            document.getElementById('btn-explore-ai').disabled = true;
+        }
+    }
+
+    function hideReviewGameOver() {
+        reviewGameOverBanner.style.display = 'none';
+        document.getElementById('btn-explore-ai').disabled = false;
+    }
+
     function enterExplore(fen) {
         isExploring = true;
         exploreFen  = fen;
@@ -1363,6 +1388,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ['btn-rv-start','btn-rv-prev','btn-rv-next','btn-rv-end'].forEach(id => {
             document.getElementById(id).disabled = true;
         });
+        hideReviewGameOver();
         setReviewQuip('review_good', null);
     }
 
@@ -1370,6 +1396,7 @@ document.addEventListener("DOMContentLoaded", () => {
         isExploring = false;
         exploreFen  = null;
         exploreBanner.style.display = 'none';
+        hideReviewGameOver();
         if (currentGame) goToMove(currentMoveIdx);
     }
 
@@ -1393,6 +1420,7 @@ document.addEventListener("DOMContentLoaded", () => {
             reviewBoardObj.position(exploreFen, false);
             const evalVal = data.eval ?? 0;
             reviewEvalFill.style.height = evalToPercent(evalVal) + '%';
+            if (data.game_over) { showReviewGameOver(data.result, true); return; }
             setReviewQuip('opp_good', null);
         } catch (_) {}
         btn.disabled = false;
@@ -1434,6 +1462,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 const evalData = await evalRes.json();
                 reviewEvalFill.style.height = evalToPercent(evalData.eval ?? 0) + '%';
+                if (data.game_over) { showReviewGameOver(data.result, true); return; }
                 setReviewQuip('review_good', null);
             },
             onSnapEnd: () => {}
